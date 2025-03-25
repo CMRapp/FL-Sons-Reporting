@@ -122,4 +122,4 @@ This project is proprietary and confidential. All rights reserved.
 
 ## Support
 
-For support, please contact the FL SAR IT Committee or CMR Web Studio.
+For support, please contact the FL SAL IT Committee or CMR Web Studio.
