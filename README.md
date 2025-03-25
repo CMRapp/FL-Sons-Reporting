@@ -1,4 +1,4 @@
-# FL SAR Reporting Portal
+# FL SAL Reporting Portal
 
 A modern web application for the Florida Sons of the American Legion (FL SAL) to handle report submissions. Built with Next.js 14 and TypeScript.
 
