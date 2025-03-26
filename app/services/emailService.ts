@@ -27,6 +27,14 @@ interface EmailData {
   reportId: string;
 }
 
+interface ConfirmationEmailData {
+  userName: string;
+  userEmail: string;
+  reportName: string;
+  fileName: string;
+  submissionDateTime: string;
+}
+
 export async function sendEmail(data: EmailData) {
   try {
     console.log('Preparing email with data:', {
@@ -126,4 +134,67 @@ export async function sendEmail(data: EmailData) {
       details: error instanceof Error ? error.message : 'Unknown error',
     };
   }
-} 
+}
+
+export const sendConfirmationEmail = async (data: ConfirmationEmailData): Promise<void> => {
+  try {
+    console.log('Preparing confirmation email:', {
+      to: data.userEmail,
+      userName: data.userName,
+      reportName: data.reportName,
+      fileName: data.fileName,
+      submissionDateTime: data.submissionDateTime,
+      timestamp: new Date().toISOString()
+    });
+
+    // Check if SMTP configuration is complete
+    if (!process.env.SMTP_HOST || !process.env.SMTP_PORT || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
+      throw new Error('Incomplete SMTP configuration');
+    }
+
+    const subject = `Confirmation: ${data.reportName} Submission`;
+    const text = `Hello, ${data.userName}!\n\nYour ${data.reportName} (${data.fileName}) has been successfully submitted on ${data.submissionDateTime}.\n\nThank you!`;
+    
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2>Submission Confirmation</h2>
+        <p>Hello, ${data.userName}!</p>
+        <p>Your ${data.reportName} (${data.fileName}) has been successfully submitted on ${data.submissionDateTime}.</p>
+        <p>Thank you!</p>
+      </div>
+    `;
+
+    const mailOptions = {
+      from: process.env.SMTP_USER,
+      to: data.userEmail,
+      subject,
+      text,
+      html,
+    };
+
+    console.log('Sending confirmation email with options:', {
+      ...mailOptions,
+      from: mailOptions.from,
+      to: mailOptions.to,
+      subject: mailOptions.subject
+    });
+
+    const info = await transporter.sendMail(mailOptions);
+    
+    console.log('Confirmation email sent successfully:', {
+      messageId: info.messageId,
+      response: info.response,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error sending confirmation email:', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      data: {
+        ...data,
+        timestamp: new Date().toISOString()
+      }
+    });
+    throw error;
+  }
+}; 

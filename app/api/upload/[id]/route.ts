@@ -1,8 +1,7 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { writeFile, mkdir, access } from 'fs/promises';
 import { join } from 'path';
-import { sendEmail } from '@/app/services/emailService';
-import { NextRequest } from 'next/server';
+import { sendEmail, sendConfirmationEmail } from '@/app/services/emailService';
 
 // Maximum file size (10MB)
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -168,6 +167,24 @@ export async function POST(
     } else {
       console.log('Email sent successfully:', emailResult.details);
     }
+
+    // Send confirmation email to user
+    const submissionDateTime = new Date().toLocaleString('en-US', {
+      month: '2-digit',
+      day: '2-digit',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+
+    await sendConfirmationEmail({
+      userName,
+      userEmail,
+      reportName,
+      fileName: file.name,
+      submissionDateTime
+    });
 
     return NextResponse.json(
       { 

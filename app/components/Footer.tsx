@@ -2,24 +2,24 @@ import Image from 'next/image';
 
 const Footer = () => {
   return (
-    <footer className="w-full py-6 bg-white">
-      <div className="max-w-4xl lg:max-w-[1200px] mx-auto px-6">
-        <div className="flex justify-center">
-          <a
-            href="https://cmrwebstudio.com/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:opacity-80 transition-opacity"
-          >
+    <footer className="bg-blue-800 text-white py-4">
+      <div className="container mx-auto px-4">
+        <div className="flex flex-col md:flex-row justify-between items-center">
+          <div className="text-sm mb-2 md:mb-0">
+            © {new Date().getFullYear()} Sons of The American Legion Detachment of Florida. All rights reserved.
+          </div>
+          <div className="text-sm flex items-center space-x-4">
+            <a href="https://www.cmrwebstudio.com" target="_blank" rel="noopener noreferrer" className="hover:text-blue-200">
+              Web Development by CMR Web Studio
+            </a>
             <Image
               src="/cmr_patriotic_logo_65.png"
-              alt="CMR Web Studio Logo"
-              width={183}
-              height={65}
-              priority
-              className="w-[183px] h-[65px]"
+              alt="CMR Web Studio Patriotic Logo"
+              width={84}
+              height={30}
+              className="h-[30px] w-[84px]"
             />
-          </a>
+          </div>
         </div>
       </div>
     </footer>
