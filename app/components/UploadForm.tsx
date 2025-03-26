@@ -338,7 +338,7 @@ const UploadForm = () => {
                    `Upload #${index + 1}`}
                 </h4>
                 <p className="text-blue-500">
-                  {index === 0 ? 'Submit a copy of your NATIONAL CSR.' :
+                  {index === 0 ? 'Submit a COPY of your NATIONAL CSR.' :
                    index === 1 ? 'Annual DETACHMENT report highlighting your squadron\'s activities and achievements.' :
                    index === 2 ? 'Annual report on your squadron\'s VA&R activities.' :
                    index === 3 ? 'Nomination form for VAVS Volunteer of the Year award' :
@@ -351,7 +351,7 @@ const UploadForm = () => {
                 </p>
                 <p className="text-red-500 font-bold italic uppercase text-xs">
                   {index === 0 ? 'Use the myLegion.org portal to submit your NATIONAL CSR or mail a copy to National Headquarters.' :
-                   index === 1 ? 'Due by May 15 15th of every year' :
+                   index === 1 ? 'Due by May 15th of every year' :
                    index === 2 ? 'Due by May 15th of every year' :
                    index === 3 ? 'Due by May 15th of every year' :
                    index === 4 ? 'Due by May 15th of every year' :
