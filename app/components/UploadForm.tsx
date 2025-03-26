@@ -324,7 +324,7 @@ const UploadForm = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {Array.from({ length: 10 }, (_, index) => (
               <div key={index} className="bg-white shadow-md rounded-lg p-6">
-                <h4 className="text-l font-semibold mb-4 text-black uppercase">
+                <h4 className="text-l font-semibold text-black uppercase">
                   {index === 0 ? 'National Consolidated Squadron Report (NCSR)' : 
                    index === 1 ? 'Detachment Consolidated Squadron Report (DCSR)' : 
                    index === 2 ? 'Veterans Affairs & Rehabilitation (VA&R)' :
@@ -337,7 +337,31 @@ const UploadForm = () => {
                    index === 9 ? 'District Officers Report (DOR)' :
                    `Upload #${index + 1}`}
                 </h4>
-                <div className="flex items-center space-x-4">
+                <p className="text-blue-500">
+                  {index === 0 ? 'Submit a copy of your NATIONAL CSR.' :
+                   index === 1 ? 'Annual DETACHMENT report highlighting your squadron\'s activities and achievements.' :
+                   index === 2 ? 'Annual report on your squadron\'s VA&R activities.' :
+                   index === 3 ? 'Nomination form for VAVS Volunteer of the Year award' :
+                   index === 4 ? 'Annual Report on your squadron\'s Americanism programs and activities' :
+                   index === 5 ? 'Annual Report on your squadron\'s C&Y programs and activities' :
+                   index === 6 ? 'Squadron Officer Information Report' :
+                   index === 7 ? 'Indicates the amount of dues money to collect by National' :
+                   index === 8 ? 'Documentation of squadron officer changes and updates' :
+                   'Report on district-level officer appointments and changes'}
+                </p>
+                <p className="text-red-500 font-bold italic uppercase text-xs">
+                  {index === 0 ? 'Use the myLegion.org portal to submit your NATIONAL CSR or mail a copy to National Headquarters.' :
+                   index === 1 ? 'Due by May 15 15th of every year' :
+                   index === 2 ? 'Due by May 15th of every year' :
+                   index === 3 ? 'Due by May 15th of every year' :
+                   index === 4 ? 'Due by May 15th of every year' :
+                   index === 5 ? 'Due by May 15th of every year' :
+                   index === 6 ? 'Must be submitted immediately following squadron elections' :
+                   index === 7 ? 'Only submit if there has been a change in your dues or squadron information. Submit by April 9th of every year':
+                   index === 8 ? 'Due within 30 days of a squadron officer officer change' :
+                   'Due immediately folloein your District Constitutional Conference (DCC)'}
+                </p>
+                <div className="flex items-center space-x-4 mt-4">
                   <div className="flex-1">
                     <div className="flex items-center space-x-2">
                       <Image

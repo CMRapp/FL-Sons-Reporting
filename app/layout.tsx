@@ -12,7 +12,7 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: "Detachment of Florida Reporting Portal",
-  description: "Submit reports for Florida Sons of the American Revolution",
+  description: "Submit reports for Sons of the American Legion Detachment of Florida",
   icons: {
     icon: '/fl-sons-150.png',
     shortcut: '/fl-sons-150.png',
