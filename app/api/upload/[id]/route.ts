@@ -13,14 +13,20 @@ const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'pdf'];
 // Valid report IDs
 const VALID_REPORT_IDS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
 
+type RouteContext = {
+  params: {
+    id: string;
+  };
+};
+
 export async function POST(
   request: NextRequest,
-  context: { params: { id: string } }
+  { params }: RouteContext
 ) {
   try {
     // Validate report ID
-    if (!VALID_REPORT_IDS.includes(context.params.id)) {
-      console.error('Invalid report ID:', context.params.id);
+    if (!VALID_REPORT_IDS.includes(params.id)) {
+      console.error('Invalid report ID:', params.id);
       return NextResponse.json(
         { message: 'Invalid report ID' },
         { status: 400 }
@@ -28,7 +34,7 @@ export async function POST(
     }
 
     console.log('Processing upload request:', {
-      reportId: context.params.id,
+      reportId: params.id,
       timestamp: new Date().toISOString(),
     });
 
@@ -132,15 +138,15 @@ export async function POST(
     }
 
     // Get report name based on ID
-    const reportName = context.params.id === '1' ? 'National Consolidated Squadron Report (NCSR)' :
-                      context.params.id === '2' ? 'Detachment Consolidated Squadron Report (DCSR)' :
-                      context.params.id === '3' ? 'Veterans Affairs & Rehabilitation (VA&R)' :
-                      context.params.id === '4' ? 'VAVS Volunteer of the Year' :
-                      context.params.id === '5' ? 'Americanism' :
-                      context.params.id === '6' ? 'Children & Youth (C&Y)' :
-                      context.params.id === '7' ? 'Squadron Information Report (SIR)' :
-                      context.params.id === '8' ? 'Annual Squadron Data Report (SDR)' :
-                      context.params.id === '9' ? 'Squadron Officer Change (SOC)' :
+    const reportName = params.id === '1' ? 'National Consolidated Squadron Report (NCSR)' :
+                      params.id === '2' ? 'Detachment Consolidated Squadron Report (DCSR)' :
+                      params.id === '3' ? 'Veterans Affairs & Rehabilitation (VA&R)' :
+                      params.id === '4' ? 'VAVS Volunteer of the Year' :
+                      params.id === '5' ? 'Americanism' :
+                      params.id === '6' ? 'Children & Youth (C&Y)' :
+                      params.id === '7' ? 'Squadron Information Report (SIR)' :
+                      params.id === '8' ? 'Annual Squadron Data Report (SDR)' :
+                      params.id === '9' ? 'Squadron Officer Change (SOC)' :
                       'District Officers Report (DOR)';
 
     // Send email notification
@@ -158,7 +164,7 @@ export async function POST(
       districtNumber,
       reportName,
       fileName,
-      reportId: context.params.id,
+      reportId: params.id,
     });
 
     if (!emailResult.success) {
@@ -198,7 +204,7 @@ export async function POST(
     console.error('Error processing upload:', {
       error: error instanceof Error ? error.message : 'Unknown error',
       stack: error instanceof Error ? error.stack : undefined,
-      reportId: context.params.id,
+      reportId: params.id,
       timestamp: new Date().toISOString(),
     });
     
