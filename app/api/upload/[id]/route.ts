@@ -131,23 +131,29 @@ export async function POST(
     });
 
     if (!emailResult.success) {
+      console.error('Failed to send email:', emailResult.details);
       throw new Error(typeof emailResult.details === 'string' ? emailResult.details : 'Failed to send email');
     }
 
-    await sendConfirmationEmail({
-      userName,
-      userEmail,
-      reportName,
-      fileName,
-      submissionDateTime: new Date().toLocaleString('en-US', {
-        month: '2-digit',
-        day: '2-digit',
-        year: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true
-      })
-    });
+    try {
+      await sendConfirmationEmail({
+        userName,
+        userEmail,
+        reportName,
+        fileName,
+        submissionDateTime: new Date().toLocaleString('en-US', {
+          month: '2-digit',
+          day: '2-digit',
+          year: 'numeric',
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        })
+      });
+    } catch (error) {
+      console.error('Failed to send confirmation email:', error);
+      // Don't throw here, as the main email was sent successfully
+    }
 
     return NextResponse.json({
       message: 'File uploaded successfully',
