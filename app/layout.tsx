@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import 'tailwindcss/tailwind.css';
 import Footer from "./components/Footer";
 import TopBar from "./components/TopBar";
 

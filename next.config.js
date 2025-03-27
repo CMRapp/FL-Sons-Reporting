@@ -1,7 +1,14 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    domains: ['floridasons.org'], // Add any other domains you're loading images from
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'floridasons.org',
+        port: '',
+        pathname: '/**',
+      },
+    ],
   },
   env: {
     SMTP_HOST: process.env.SMTP_HOST,
@@ -21,14 +28,6 @@ const nextConfig = {
     EMAIL_USER: process.env.EMAIL_USER,
     EMAIL_PASSWORD: process.env.EMAIL_PASSWORD,
     ADMIN_EMAIL: process.env.ADMIN_EMAIL,
-  },
-  // Enable CSS modules
-  webpack: (config) => {
-    config.module.rules.push({
-      test: /\.css$/,
-      use: ['style-loader', 'css-loader'],
-    });
-    return config;
   },
 };
 

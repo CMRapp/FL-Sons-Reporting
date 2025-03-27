@@ -52,105 +52,76 @@ export async function POST(
       );
     }
 
+    if (file.size > MAX_FILE_SIZE) {
+      console.error('File too large:', file.size);
+      return NextResponse.json(
+        { message: 'File too large' },
+        { status: 400 }
+      );
+    }
+
+    // Create uploads directory if it doesn't exist
+    const uploadDir = join(process.cwd(), 'uploads');
+    try {
+      await access(uploadDir);
+    } catch {
+      await mkdir(uploadDir, { recursive: true });
+    }
+
+    // Get form data
+    const userName = formData.get('userName') as string;
+    const userEmail = formData.get('userEmail') as string;
+    const userTitle = formData.get('userTitle') as string;
+    const squadronNumber = formData.get('squadronNumber') as string;
+    const districtNumber = formData.get('districtNumber') as string;
+
+    // Validate required fields
+    if (!userName || !userEmail || !userTitle || !squadronNumber || !districtNumber) {
+      return NextResponse.json(
+        { message: 'Missing required fields' },
+        { status: 400 }
+      );
+    }
+
+    // Get file extension
     const fileExtension = file.name.split('.').pop()?.toLowerCase();
-    if (!ALLOWED_EXTENSIONS.includes(fileExtension || '')) {
-      console.error('Invalid file extension:', fileExtension);
+    if (!fileExtension || !ALLOWED_EXTENSIONS.includes(fileExtension)) {
       return NextResponse.json(
         { message: 'Invalid file extension' },
         { status: 400 }
       );
     }
 
+    // Get report name based on ID
+    const reportName = params.id === '1' ? 'NCSR' :
+                      params.id === '2' ? 'DCSR' :
+                      params.id === '3' ? 'VA&R' :
+                      params.id === '4' ? 'VAVS-VOY' :
+                      params.id === '5' ? 'AMERICANISM' :
+                      params.id === '6' ? 'C&Y' :
+                      params.id === '7' ? 'SIR' :
+                      params.id === '8' ? 'SDR' :
+                      params.id === '9' ? 'SOC' :
+                      'DOR';
+
+    // Create filename with MMDDYYYY format
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('en-US', {
+      month: '2-digit',
+      day: '2-digit',
+      year: 'numeric'
+    }).replace(/\//g, '');
+
+    const fileName = `FLSQ-${squadronNumber}-${reportName}-${dateStr}.${fileExtension}`;
+    const filePath = join(uploadDir, fileName);
+
+    // Convert File to Buffer and save
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-
-    if (buffer.length > MAX_FILE_SIZE) {
-      console.error('File size exceeds limit:', buffer.length);
-      return NextResponse.json(
-        { message: 'File size exceeds 10MB limit' },
-        { status: 400 }
-      );
-    }
-
-    // Create a unique filename with sanitization
-    const timestamp = new Date().getTime();
-    const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const fileName = `${timestamp}-${sanitizedFileName}`;
-    
-    // Ensure uploads directory exists
-    const uploadDir = join(process.cwd(), 'uploads');
-    try {
-      await access(uploadDir);
-    } catch {
-      await mkdir(uploadDir, { recursive: true });
-      console.log('Created uploads directory:', uploadDir);
-    }
-
-    // Save the file
-    const filePath = join(uploadDir, fileName);
     await writeFile(filePath, buffer);
 
-    console.log('File saved successfully:', {
-      fileName,
-      filePath,
-      size: buffer.length,
-    });
-
-    // Get and sanitize form data
-    const userName = (formData.get('userName') as string)?.replace(/[<>]/g, '');
-    const userEmail = (formData.get('userEmail') as string)?.toLowerCase().trim();
-    const userTitle = (formData.get('userTitle') as string)?.replace(/[<>]/g, '');
-    const squadronNumber = (formData.get('squadronNumber') as string)?.replace(/[^0-9]/g, '');
-    const districtNumber = (formData.get('districtNumber') as string)?.replace(/[^0-9]/g, '');
-
-    // Validate required fields
-    if (!userName || !userEmail || !userTitle || !squadronNumber || !districtNumber) {
-      console.error('Missing required form data');
-      return NextResponse.json(
-        { message: 'Missing required form data' },
-        { status: 400 }
-      );
-    }
-
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(userEmail)) {
-      console.error('Invalid email format:', userEmail);
-      return NextResponse.json(
-        { message: 'Invalid email format' },
-        { status: 400 }
-      );
-    }
-
-    // Validate squadron number format
-    if (!/^\d+$/.test(squadronNumber)) {
-      console.error('Invalid squadron number format:', squadronNumber);
-      return NextResponse.json(
-        { message: 'Invalid squadron number format' },
-        { status: 400 }
-      );
-    }
-
-    // Get report name based on ID
-    const reportName = params.id === '1' ? 'National Consolidated Squadron Report (NCSR)' :
-                      params.id === '2' ? 'Detachment Consolidated Squadron Report (DCSR)' :
-                      params.id === '3' ? 'Veterans Affairs & Rehabilitation (VA&R)' :
-                      params.id === '4' ? 'VAVS Volunteer of the Year' :
-                      params.id === '5' ? 'Americanism' :
-                      params.id === '6' ? 'Children & Youth (C&Y)' :
-                      params.id === '7' ? 'Squadron Information Report (SIR)' :
-                      params.id === '8' ? 'Annual Squadron Data Report (SDR)' :
-                      params.id === '9' ? 'Squadron Officer Change (SOC)' :
-                      'District Officers Report (DOR)';
-
-    // Send email notification
-    console.log('Sending email notification for:', {
-      reportName,
-      userName,
-      userEmail,
-    });
-
-    const emailResult = await sendEmail({
+    // Send confirmation emails
+    await sendEmail({
       userName,
       userEmail,
       userTitle,
@@ -158,55 +129,33 @@ export async function POST(
       districtNumber,
       reportName,
       fileName,
-      reportId: params.id,
-    });
-
-    if (!emailResult.success) {
-      console.error('Failed to send email:', emailResult);
-      // Continue with the response even if email fails
-    } else {
-      console.log('Email sent successfully:', emailResult.details);
-    }
-
-    // Send confirmation email to user
-    const submissionDateTime = new Date().toLocaleString('en-US', {
-      month: '2-digit',
-      day: '2-digit',
-      year: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
+      reportId: params.id
     });
 
     await sendConfirmationEmail({
       userName,
       userEmail,
       reportName,
-      fileName: file.name,
-      submissionDateTime
+      fileName,
+      submissionDateTime: new Date().toLocaleString('en-US', {
+        month: '2-digit',
+        day: '2-digit',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      })
     });
 
-    return NextResponse.json(
-      { 
-        message: 'File uploaded successfully',
-        emailStatus: emailResult.success ? 'sent' : 'failed',
-        emailDetails: emailResult.details,
-      },
-      { status: 200 }
-    );
-  } catch (error) {
-    console.error('Error processing upload:', {
-      error: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined,
-      reportId: params.id,
-      timestamp: new Date().toISOString(),
+    return NextResponse.json({
+      message: 'File uploaded successfully',
+      fileName: fileName,
     });
-    
+
+  } catch (error) {
+    console.error('Error processing upload:', error);
     return NextResponse.json(
-      { 
-        message: 'Error uploading file',
-        error: error instanceof Error ? error.message : 'Unknown error',
-      },
+      { message: 'Error processing upload' },
       { status: 500 }
     );
   }

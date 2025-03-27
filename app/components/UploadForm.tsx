@@ -48,48 +48,33 @@ const UploadForm = () => {
     if (file) {
       const fileType = file.type;
       const maxSize = 10 * 1024 * 1024; // 10MB
-      const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
-      const allowedExtensions = ['jpg', 'jpeg', 'png', 'pdf'];
 
-      // Check file size
+      if (fileType !== 'application/pdf' && fileType !== 'image/jpeg' && fileType !== 'image/png') {
+        setUploadStatus(prev => {
+          const newStatus = [...prev];
+          newStatus[index] = 'Error: Only PDF, JPEG, and PNG files are allowed';
+          return newStatus;
+        });
+        return;
+      }
+
       if (file.size > maxSize) {
         setUploadStatus(prev => {
           const newStatus = [...prev];
-          newStatus[index] = `Error: File size exceeds 10MB limit`;
+          newStatus[index] = 'Error: File size must be less than 10MB';
           return newStatus;
         });
-        e.target.value = ''; // Clear the input
-        const newFiles = [...files];
-        newFiles[index] = null;
-        setFiles(newFiles);
         return;
       }
 
-      // Validate file type and extension
-      const fileExtension = file.name.split('.').pop()?.toLowerCase();
-      if (!allowedTypes.includes(fileType) || !allowedExtensions.includes(fileExtension || '')) {
-        setUploadStatus(prev => {
-          const newStatus = [...prev];
-          newStatus[index] = 'Error: Please upload only .jpg, .png, or .pdf files';
-          return newStatus;
-        });
-        e.target.value = ''; // Clear the input
-        const newFiles = [...files];
-        newFiles[index] = null;
-        setFiles(newFiles);
-        return;
-      }
-
-      // Sanitize filename
-      const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-      const newFile = new File([file], sanitizedFileName, { type: file.type });
-      
-      const newFiles = [...files];
-      newFiles[index] = newFile;
-      setFiles(newFiles);
+      setFiles(prev => {
+        const newFiles = [...prev];
+        newFiles[index] = file;
+        return newFiles;
+      });
       setUploadStatus(prev => {
         const newStatus = [...prev];
-        newStatus[index] = ''; // Clear any previous error
+        newStatus[index] = 'File selected';
         return newStatus;
       });
     }
@@ -171,13 +156,8 @@ const UploadForm = () => {
 
     setCurrentReportName(reportName);
 
-    // Create new file with formatted name
-    const originalFile = files[index];
-    const fileExtension = originalFile?.name.split('.').pop()?.toLowerCase() || '';
-    const newFileName = `FL-SQ${sanitizedFormData.squadronNumber}-${reportName}.${fileExtension}`;
-    const newFile = new File([originalFile!], newFileName, { type: originalFile!.type });
-    
-    formDataToSend.append('file', newFile);
+    // Append the original file without renaming
+    formDataToSend.append('file', files[index]!);
     Object.entries(sanitizedFormData).forEach(([key, value]) => {
       formDataToSend.append(key, value);
     });
@@ -215,9 +195,10 @@ const UploadForm = () => {
         return newStatus;
       });
     } catch (error) {
+      console.error('Upload error:', error);
       setUploadStatus(prev => {
         const newStatus = [...prev];
-        newStatus[index] = `Error: ${error instanceof Error ? error.message : 'Failed to upload file'}`;
+        newStatus[index] = `Error: ${error instanceof Error ? error.message : 'Upload failed'}`;
         return newStatus;
       });
     }
@@ -225,10 +206,10 @@ const UploadForm = () => {
 
   const handleJumpToReport = (reportId: string) => {
     if (reportId) {
+      setFocusedReport(reportId);
       const element = document.getElementById(reportId);
       if (element) {
         element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        setFocusedReport(reportId);
         // Remove focus after 3 seconds
         setTimeout(() => {
           setFocusedReport(null);
@@ -423,7 +404,7 @@ const UploadForm = () => {
                       <input
                         type="file"
                         onChange={(e) => handleFileChange(index, e)}
-                        accept=".jpg,.jpeg,.png,.pdf"
+                        accept=".pdf,.jpg,.jpeg,.png"
                         className="flex-1 text-black placeholder:text-gray-200 file:text-blue-500"
                         aria-label={`Upload file for ${index === 0 ? 'National Consolidated Squadron Report' : 
                                    index === 1 ? 'Detachment Consolidated Squadron Report' : 
@@ -437,7 +418,7 @@ const UploadForm = () => {
                                    'District Officers Report'}`}
                       />
                     </div>
-                    <p className="text-sm text-gray-500 mt-1">Accepted file types: JPG, PNG, PDF (Max size: 10MB)</p>
+                    <p className="text-sm text-gray-500 mt-1">Accepted file types: PDF, JPEG, PNG (Max size: 10MB)</p>
                     <button
                       onClick={() => handleSubmit(index)}
                       disabled={uploadStatus[index] === 'Uploading...'}

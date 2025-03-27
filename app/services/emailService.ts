@@ -84,11 +84,11 @@ export async function sendEmail(data: EmailData) {
         <p><strong>Squadron Number:</strong> ${data.squadronNumber}</p>
         <p><strong>District Number:</strong> ${data.districtNumber}</p>
         <p><strong>Email:</strong> ${data.userEmail}</p>
-        <p><strong>File:</strong> ${data.fileName.split('-').slice(1).join('-')}</p>
+        <p><strong>File:</strong> ${data.fileName}</p>
       `,
       attachments: [
         {
-          filename: data.fileName.split('-').slice(1).join('-'),
+          filename: data.fileName,
           path: filePath,
         },
       ],
