@@ -378,7 +378,7 @@ const UploadForm = () => {
                    index === 8 ? 'Documentation of squadron officer changes and updates' :
                    'Report on district-level officer appointments and changes'}
                 </p>
-                <p className="text-red-500 font-bold italic uppercase text-xs">
+                <p className="text-red-500 font-bold italic uppercase text-xs my-2">
                   {index === 0 ? 'Use the myLegion.org portal to submit your NATIONAL CSR or mail a copy to National Headquarters.' :
                    index === 1 ? 'Due by May 15th of every year' :
                    index === 2 ? 'Due by May 15th of every year' :
