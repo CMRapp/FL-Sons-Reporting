@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import Modal from './Modal';
+import JumpBar from './JumpBar';
 
 interface FormData {
   userName: string;
@@ -13,6 +14,8 @@ interface FormData {
 }
 
 const UploadForm = () => {
+  const districtNumbers = Array.from({ length: 17 }, (_, i) => i + 1).filter(num => num !== 10);
+
   const [formData, setFormData] = useState<FormData>({
     userName: '',
     userEmail: '',
@@ -26,6 +29,7 @@ const UploadForm = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMessage, setModalMessage] = useState('');
   const [currentReportName, setCurrentReportName] = useState('');
+  const [focusedReport, setFocusedReport] = useState<string | null>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -219,7 +223,19 @@ const UploadForm = () => {
     }
   };
 
-  const districtNumbers = Array.from({ length: 17 }, (_, i) => i + 1).filter(num => num !== 10);
+  const handleJumpToReport = (reportId: string) => {
+    if (reportId) {
+      const element = document.getElementById(reportId);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        setFocusedReport(reportId);
+        // Remove focus after 3 seconds
+        setTimeout(() => {
+          setFocusedReport(null);
+        }, 3000);
+      }
+    }
+  };
 
   return (
     <div className="w-full min-h-screen bg-[url('/flag-body-bg.png')] bg-no-repeat bg-cover -mt-6">
@@ -228,15 +244,17 @@ const UploadForm = () => {
         <div className="flex justify-center mb-8">
           <Image
             src="/fl-sons-150.png"
-            alt="Florida Sons of the American Revolution Logo"
+            alt="Florida Sons of the American Legion Logo"
             width={168}
             height={150}
             priority
           />
         </div>
 
-        <h1 className="text-3xl font-bold mb-8 text-center text-blue-800 uppercase">Report Submission Portal</h1>
+        <h1 className="text-3xl font-bold mb-8 text-center text-blue-800 uppercase">2024-2025 Report Submission Portal</h1>
+        <p className="text-center text-black text-xl mb-8">Please fill out the form below to submit your reports for the 2024-2025 service year.</p>
         
+        {/* User Information Form */}
         <div className="bg-white shadow-md rounded-lg p-6 mb-8">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
@@ -320,10 +338,40 @@ const UploadForm = () => {
           </div>
         </div>
 
+        {/* JumpBar */}
+        <JumpBar onSelect={handleJumpToReport} />
+
+        {/* Report Submission Sections */}
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {Array.from({ length: 10 }, (_, index) => (
-              <div key={index} className="bg-white shadow-md rounded-lg p-6">
+              <div 
+                key={index} 
+                id={`report-${index === 0 ? 'ncsr' : 
+                         index === 1 ? 'dcsr' : 
+                         index === 2 ? 'var' :
+                         index === 3 ? 'vavs-voy' :
+                         index === 4 ? 'americanism' :
+                         index === 5 ? 'cy' :
+                         index === 6 ? 'sir' :
+                         index === 7 ? 'sdr' :
+                         index === 8 ? 'soc' :
+                         'dor'}`} 
+                className={`bg-white shadow-md rounded-lg p-6 transition-all duration-300 ${
+                  focusedReport === `report-${index === 0 ? 'ncsr' : 
+                                   index === 1 ? 'dcsr' : 
+                                   index === 2 ? 'var' :
+                                   index === 3 ? 'vavs-voy' :
+                                   index === 4 ? 'americanism' :
+                                   index === 5 ? 'cy' :
+                                   index === 6 ? 'sir' :
+                                   index === 7 ? 'sdr' :
+                                   index === 8 ? 'soc' :
+                                   'dor'}` 
+                  ? 'ring-4 ring-blue-500 ring-opacity-50 shadow-lg' 
+                  : ''
+                }`}
+              >
                 <h4 className="text-l font-semibold text-black uppercase">
                   {index === 0 ? 'National Consolidated Squadron Report (NCSR)' : 
                    index === 1 ? 'Detachment Consolidated Squadron Report (DCSR)' : 
@@ -359,9 +407,9 @@ const UploadForm = () => {
                    index === 6 ? 'Must be submitted immediately following squadron elections' :
                    index === 7 ? 'Only submit if there has been a change in your dues or squadron information. Submit by April 9th of every year':
                    index === 8 ? 'Due within 30 days of a squadron officer officer change' :
-                   'Due immediately folloein your District Constitutional Conference (DCC)'}
+                   'Due immediately following your District Constitutional Conference (DCC)'}
                 </p>
-                <div className="flex items-center space-x-4 mt-4">
+                <div className="flex items-center space-x-4">
                   <div className="flex-1">
                     <div className="flex items-center space-x-2">
                       <Image
@@ -390,27 +438,27 @@ const UploadForm = () => {
                       />
                     </div>
                     <p className="text-sm text-gray-500 mt-1">Accepted file types: JPG, PNG, PDF (Max size: 10MB)</p>
+                    <button
+                      onClick={() => handleSubmit(index)}
+                      disabled={uploadStatus[index] === 'Uploading...'}
+                      className={`mt-2 bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                        uploadStatus[index] === 'Uploading...' ? 'opacity-50 cursor-not-allowed' : ''
+                      }`}
+                      aria-label={`Submit ${index === 0 ? 'National Consolidated Squadron Report' : 
+                                 index === 1 ? 'Detachment Consolidated Squadron Report' : 
+                                 index === 2 ? 'Veterans Affairs & Rehabilitation' :
+                                 index === 3 ? 'VAVS Volunteer of the Year' :
+                                 index === 4 ? 'Americanism' :
+                                 index === 5 ? 'Children & Youth' :
+                                 index === 6 ? 'Squadron Information Report' :
+                                 index === 7 ? 'Annual Squadron Data Report' :
+                                 index === 8 ? 'Squadron Officer Change' :
+                                 'District Officers Report'}`}
+                      aria-disabled={uploadStatus[index] === 'Uploading...'}
+                    >
+                      {uploadStatus[index] === 'Uploading...' ? 'Uploading...' : 'Submit'}
+                    </button>
                   </div>
-                  <button
-                    onClick={() => handleSubmit(index)}
-                    disabled={uploadStatus[index] === 'Uploading...'}
-                    className={`bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                      uploadStatus[index] === 'Uploading...' ? 'opacity-50 cursor-not-allowed' : ''
-                    }`}
-                    aria-label={`Submit ${index === 0 ? 'National Consolidated Squadron Report' : 
-                               index === 1 ? 'Detachment Consolidated Squadron Report' : 
-                               index === 2 ? 'Veterans Affairs & Rehabilitation' :
-                               index === 3 ? 'VAVS Volunteer of the Year' :
-                               index === 4 ? 'Americanism' :
-                               index === 5 ? 'Children & Youth' :
-                               index === 6 ? 'Squadron Information Report' :
-                               index === 7 ? 'Annual Squadron Data Report' :
-                               index === 8 ? 'Squadron Officer Change' :
-                               'District Officers Report'}`}
-                    aria-disabled={uploadStatus[index] === 'Uploading...'}
-                  >
-                    {uploadStatus[index] === 'Uploading...' ? 'Uploading...' : 'Submit'}
-                  </button>
                 </div>
                 {uploadStatus[index] && (
                   <p 

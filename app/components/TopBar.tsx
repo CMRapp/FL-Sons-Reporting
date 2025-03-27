@@ -39,7 +39,7 @@ const TopBar = () => {
   }, []);
 
   return (
-    <div className="h-[30px] bg-blue-800 text-white flex items-center justify-end px-4">
+    <div className="h-[30px] bg-blue-800 text-white flex items-center justify-center px-4">
       <div className="flex items-center space-x-4">
         <span className="text-sm">{currentTime}</span>
         <span className="text-sm">{currentDate}</span>
