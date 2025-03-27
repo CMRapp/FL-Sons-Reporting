@@ -23,6 +23,7 @@ const nextConfig = {
     ADMIN_EMAIL: process.env.ADMIN_EMAIL,
   },
 <<<<<<< HEAD
+<<<<<<< HEAD
   // Ensure CSS is properly handled in production
   webpack: (config) => {
     config.module.rules.push({
@@ -31,6 +32,8 @@ const nextConfig = {
     });
     return config;
   },
+=======
+>>>>>>> parent of 7b9ebff (fixed style-loader issue)
 =======
 >>>>>>> parent of 7b9ebff (fixed style-loader issue)
 };
