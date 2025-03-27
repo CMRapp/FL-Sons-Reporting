@@ -22,6 +22,14 @@ const nextConfig = {
     EMAIL_PASSWORD: process.env.EMAIL_PASSWORD,
     ADMIN_EMAIL: process.env.ADMIN_EMAIL,
   },
+  // Ensure CSS is properly handled in production
+  webpack: (config) => {
+    config.module.rules.push({
+      test: /\.css$/,
+      use: ['style-loader', 'css-loader', 'postcss-loader'],
+    });
+    return config;
+  },
 };
 
 module.exports = nextConfig; 
