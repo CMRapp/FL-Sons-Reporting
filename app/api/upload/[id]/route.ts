@@ -20,7 +20,7 @@ export async function POST(
     if (!VALID_REPORT_IDS.includes(params.id)) {
       console.error('Invalid report ID:', params.id);
       return NextResponse.json(
-        { message: 'Invalid report ID' },
+        { success: false, message: 'Invalid report ID' },
         { status: 400 }
       );
     }
@@ -36,7 +36,7 @@ export async function POST(
     if (!file) {
       console.error('No file provided in request');
       return NextResponse.json(
-        { message: 'No file uploaded' },
+        { success: false, message: 'No file uploaded' },
         { status: 400 }
       );
     }
@@ -45,7 +45,7 @@ export async function POST(
     if (!ALLOWED_TYPES.includes(file.type)) {
       console.error('Invalid file type:', file.type);
       return NextResponse.json(
-        { message: 'Invalid file type' },
+        { success: false, message: 'Invalid file type' },
         { status: 400 }
       );
     }
@@ -53,7 +53,7 @@ export async function POST(
     if (file.size > MAX_FILE_SIZE) {
       console.error('File too large:', file.size);
       return NextResponse.json(
-        { message: 'File too large' },
+        { success: false, message: 'File too large' },
         { status: 400 }
       );
     }
@@ -69,7 +69,7 @@ export async function POST(
     if (!userName || !userEmail || !userTitle || !squadronNumber || !districtNumber) {
       console.error('Missing required fields:', { userName, userEmail, userTitle, squadronNumber, districtNumber });
       return NextResponse.json(
-        { message: 'Missing required fields' },
+        { success: false, message: 'Missing required fields' },
         { status: 400 }
       );
     }
@@ -79,7 +79,7 @@ export async function POST(
     if (!fileExtension || !ALLOWED_EXTENSIONS.includes(fileExtension)) {
       console.error('Invalid file extension:', fileExtension);
       return NextResponse.json(
-        { message: 'Invalid file extension' },
+        { success: false, message: 'Invalid file extension' },
         { status: 400 }
       );
     }
@@ -132,7 +132,14 @@ export async function POST(
 
     if (!emailResult.success) {
       console.error('Failed to send email:', emailResult.details);
-      throw new Error(typeof emailResult.details === 'string' ? emailResult.details : 'Failed to send email');
+      return NextResponse.json(
+        { 
+          success: false, 
+          message: 'Failed to send email',
+          error: typeof emailResult.details === 'string' ? emailResult.details : 'Unknown error'
+        },
+        { status: 500 }
+      );
     }
 
     try {
@@ -156,6 +163,7 @@ export async function POST(
     }
 
     return NextResponse.json({
+      success: true,
       message: 'File uploaded successfully',
       fileName: fileName,
     });
@@ -169,6 +177,7 @@ export async function POST(
     
     return NextResponse.json(
       { 
+        success: false,
         message: 'Error processing upload',
         error: error instanceof Error ? error.message : 'Unknown error'
       },

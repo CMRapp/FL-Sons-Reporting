@@ -177,8 +177,8 @@ const UploadForm = () => {
 
       const result = await response.json();
       
-      if (!response.ok) {
-        throw new Error(result.message || 'Upload failed');
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || result.error || 'Upload failed');
       }
 
       // Show modal instead of alert
