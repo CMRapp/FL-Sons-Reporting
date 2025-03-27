@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFile, mkdir, access } from 'fs/promises';
-import { join } from 'path';
 import { sendEmail, sendConfirmationEmail } from '@/app/services/emailService';
 
 // Maximum file size (10MB)
@@ -60,15 +58,6 @@ export async function POST(
       );
     }
 
-    // Create uploads directory if it doesn't exist
-    const uploadDir = join(process.cwd(), 'uploads');
-    try {
-      await access(uploadDir);
-    } catch {
-      await mkdir(uploadDir, { recursive: true });
-      console.log('Created uploads directory:', uploadDir);
-    }
-
     // Get form data
     const userName = formData.get('userName') as string;
     const userEmail = formData.get('userEmail') as string;
@@ -116,25 +105,16 @@ export async function POST(
     }).replace(/\//g, '');
 
     const fileName = `FLSQ-${squadronNumber}-${reportName}-${dateStr}.${fileExtension}`;
-    const filePath = join(uploadDir, fileName);
 
-    console.log('Saving file:', {
+    console.log('Processing file:', {
       fileName,
-      filePath,
       fileSize: file.size,
       fileType: file.type
     });
 
-    // Convert File to Buffer and save
+    // Convert file to buffer for email attachment
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    await writeFile(filePath, buffer);
-
-    console.log('File saved successfully:', {
-      fileName,
-      filePath,
-      size: buffer.length
-    });
 
     // Send confirmation emails
     await sendEmail({
@@ -145,7 +125,9 @@ export async function POST(
       districtNumber,
       reportName,
       fileName,
-      reportId: params.id
+      reportId: params.id,
+      fileBuffer: buffer,
+      fileType: file.type
     });
 
     await sendConfirmationEmail({

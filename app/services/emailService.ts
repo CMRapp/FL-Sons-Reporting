@@ -1,6 +1,4 @@
 import nodemailer from 'nodemailer';
-import { readFile, unlink, mkdir, access } from 'fs/promises';
-import { join } from 'path';
 
 // Create SMTP transporter
 const transporter = nodemailer.createTransport({
@@ -13,9 +11,6 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// Maximum file size (10MB)
-const MAX_FILE_SIZE = 10 * 1024 * 1024;
-
 interface EmailData {
   userName: string;
   userEmail: string;
@@ -25,6 +20,8 @@ interface EmailData {
   reportName: string;
   fileName: string;
   reportId: string;
+  fileBuffer?: Buffer;
+  fileType?: string;
 }
 
 interface ConfirmationEmailData {
@@ -54,23 +51,6 @@ export async function sendEmail(data: EmailData) {
       throw new Error('Incomplete SMTP configuration');
     }
 
-    const uploadDir = join(process.cwd(), 'uploads');
-    const filePath = join(uploadDir, data.fileName);
-
-    // Read the file from uploads directory
-    const fileContent = await readFile(filePath);
-
-    // Check file size
-    if (fileContent.length > MAX_FILE_SIZE) {
-      throw new Error(`File size exceeds maximum limit of ${MAX_FILE_SIZE / (1024 * 1024)}MB`);
-    }
-
-    console.log('File read successfully:', {
-      fileName: data.fileName,
-      filePath,
-      size: fileContent.length,
-    });
-
     // Construct email content
     const mailOptions = {
       from: process.env.SMTP_USER,
@@ -86,12 +66,13 @@ export async function sendEmail(data: EmailData) {
         <p><strong>Email:</strong> ${data.userEmail}</p>
         <p><strong>File:</strong> ${data.fileName}</p>
       `,
-      attachments: [
+      attachments: data.fileBuffer ? [
         {
           filename: data.fileName,
-          path: filePath,
-        },
-      ],
+          content: data.fileBuffer,
+          contentType: data.fileType
+        }
+      ] : undefined
     };
 
     console.log('Sending email to:', recipientEmail);
@@ -103,13 +84,6 @@ export async function sendEmail(data: EmailData) {
       messageId: info.messageId,
       response: info.response,
       timestamp: new Date().toISOString(),
-    });
-
-    // Delete the file after successful email sending
-    await unlink(filePath);
-    console.log('File deleted successfully:', {
-      fileName: data.fileName,
-      filePath,
     });
 
     return {
