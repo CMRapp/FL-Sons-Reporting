@@ -66,6 +66,7 @@ export async function POST(
       await access(uploadDir);
     } catch {
       await mkdir(uploadDir, { recursive: true });
+      console.log('Created uploads directory:', uploadDir);
     }
 
     // Get form data
@@ -77,6 +78,7 @@ export async function POST(
 
     // Validate required fields
     if (!userName || !userEmail || !userTitle || !squadronNumber || !districtNumber) {
+      console.error('Missing required fields:', { userName, userEmail, userTitle, squadronNumber, districtNumber });
       return NextResponse.json(
         { message: 'Missing required fields' },
         { status: 400 }
@@ -86,6 +88,7 @@ export async function POST(
     // Get file extension
     const fileExtension = file.name.split('.').pop()?.toLowerCase();
     if (!fileExtension || !ALLOWED_EXTENSIONS.includes(fileExtension)) {
+      console.error('Invalid file extension:', fileExtension);
       return NextResponse.json(
         { message: 'Invalid file extension' },
         { status: 400 }
@@ -115,10 +118,23 @@ export async function POST(
     const fileName = `FLSQ-${squadronNumber}-${reportName}-${dateStr}.${fileExtension}`;
     const filePath = join(uploadDir, fileName);
 
+    console.log('Saving file:', {
+      fileName,
+      filePath,
+      fileSize: file.size,
+      fileType: file.type
+    });
+
     // Convert File to Buffer and save
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
     await writeFile(filePath, buffer);
+
+    console.log('File saved successfully:', {
+      fileName,
+      filePath,
+      size: buffer.length
+    });
 
     // Send confirmation emails
     await sendEmail({
@@ -153,9 +169,17 @@ export async function POST(
     });
 
   } catch (error) {
-    console.error('Error processing upload:', error);
+    console.error('Error processing upload:', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      timestamp: new Date().toISOString()
+    });
+    
     return NextResponse.json(
-      { message: 'Error processing upload' },
+      { 
+        message: 'Error processing upload',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     );
   }
