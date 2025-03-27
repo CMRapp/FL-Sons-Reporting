@@ -117,7 +117,7 @@ export async function POST(
     const buffer = Buffer.from(bytes);
 
     // Send confirmation emails
-    await sendEmail({
+    const emailResult = await sendEmail({
       userName,
       userEmail,
       userTitle,
@@ -129,6 +129,10 @@ export async function POST(
       fileBuffer: buffer,
       fileType: file.type
     });
+
+    if (!emailResult.success) {
+      throw new Error(typeof emailResult.details === 'string' ? emailResult.details : 'Failed to send email');
+    }
 
     await sendConfirmationEmail({
       userName,

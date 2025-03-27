@@ -43,12 +43,31 @@ export async function sendEmail(data: EmailData) {
     const recipientEmail = process.env[`EMAIL_${data.reportId}`] || process.env.ADMIN_EMAIL;
     
     if (!recipientEmail) {
+      console.error('No recipient email configured for report ID:', data.reportId);
       throw new Error('No recipient email configured');
     }
 
     // Check if SMTP configuration is complete
     if (!process.env.SMTP_HOST || !process.env.SMTP_PORT || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
+      console.error('Incomplete SMTP configuration:', {
+        host: process.env.SMTP_HOST ? 'configured' : 'missing',
+        port: process.env.SMTP_PORT ? 'configured' : 'missing',
+        user: process.env.SMTP_USER ? 'configured' : 'missing',
+        pass: process.env.SMTP_PASS ? 'configured' : 'missing'
+      });
       throw new Error('Incomplete SMTP configuration');
+    }
+
+    // Verify SMTP connection
+    try {
+      await transporter.verify();
+      console.log('SMTP connection verified successfully');
+    } catch (error) {
+      console.error('SMTP connection verification failed:', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      });
+      throw new Error('Failed to connect to SMTP server');
     }
 
     // Construct email content
@@ -123,7 +142,25 @@ export const sendConfirmationEmail = async (data: ConfirmationEmailData): Promis
 
     // Check if SMTP configuration is complete
     if (!process.env.SMTP_HOST || !process.env.SMTP_PORT || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
+      console.error('Incomplete SMTP configuration:', {
+        host: process.env.SMTP_HOST ? 'configured' : 'missing',
+        port: process.env.SMTP_PORT ? 'configured' : 'missing',
+        user: process.env.SMTP_USER ? 'configured' : 'missing',
+        pass: process.env.SMTP_PASS ? 'configured' : 'missing'
+      });
       throw new Error('Incomplete SMTP configuration');
+    }
+
+    // Verify SMTP connection
+    try {
+      await transporter.verify();
+      console.log('SMTP connection verified successfully');
+    } catch (error) {
+      console.error('SMTP connection verification failed:', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined
+      });
+      throw new Error('Failed to connect to SMTP server');
     }
 
     const subject = `Confirmation: ${data.reportName} Submission`;
