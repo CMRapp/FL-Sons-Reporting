@@ -182,7 +182,7 @@ const UploadForm = () => {
       }
 
       // Show modal instead of alert
-      setModalMessage(`Thank you, ${formData.userName}, your ${reportName} has been submitted.`);
+      setModalMessage(`Thank you, ${formData.userName}, your ${reportName} has been submitted. You will receive a confirmation email shortly. Save this email for your records`);
       setIsModalOpen(true);
       
       // Only clear the file input for this specific report
