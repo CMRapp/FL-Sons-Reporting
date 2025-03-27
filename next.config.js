@@ -28,7 +28,7 @@ const nextConfig = {
     EMAIL_USER: process.env.EMAIL_USER,
     EMAIL_PASSWORD: process.env.EMAIL_PASSWORD,
     ADMIN_EMAIL: process.env.ADMIN_EMAIL,
-  },
+  }
 };
 
 module.exports = nextConfig; 
