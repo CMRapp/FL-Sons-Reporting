@@ -164,13 +164,14 @@ export const sendConfirmationEmail = async (data: ConfirmationEmailData): Promis
     }
 
     const subject = `Confirmation: ${data.reportName} Submission`;
-    const text = `Hello, ${data.userName}!\n\nYour ${data.reportName} (${data.fileName}) has been successfully submitted on ${data.submissionDateTime}.\n\nThank you!`;
+    const text = `Hello, ${data.userName}!\n\nYour ${data.reportName} (${data.fileName}) has been successfully submitted on ${data.submissionDateTime}.\n\n*Confirmation sent from The Detachment of Florida Reporting Portal*\n\nThank you!`;
     
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2>Submission Confirmation</h2>
         <p>Hello, ${data.userName}!</p>
         <p>Your ${data.reportName} (${data.fileName}) has been successfully submitted on ${data.submissionDateTime}.</p>
+        <p style="font-style: italic;">Confirmation sent from The Detachment of Florida Reporting Portal</p>
         <p>Thank you!</p>
       </div>
     `;
