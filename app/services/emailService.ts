@@ -39,6 +39,10 @@ async function sendEmailToSMTP(data: {
       hasAttachments: !!data.attachments
     });
 
+    if (!process.env.SMTP2GO_API_KEY) {
+      throw new Error('SMTP2GO_API_KEY is not configured');
+    }
+
     const formData = new FormData();
     formData.append('to', data.to);
     formData.append('from', data.from);
@@ -54,6 +58,7 @@ async function sendEmailToSMTP(data: {
       });
     }
 
+    console.log('Sending request to SMTP2GO...');
     const response = await fetch('https://api.smtp2go.com/v3/email/send', {
       method: 'POST',
       headers: {
@@ -67,12 +72,25 @@ async function sendEmailToSMTP(data: {
     console.log('SMTP2GO response:', responseData);
 
     if (!response.ok) {
-      throw new Error(responseData.message || 'Failed to send email');
+      const errorMessage = responseData.message || 'Failed to send email';
+      const errorDetails = responseData.details || responseData;
+      console.error('SMTP2GO API error:', {
+        status: response.status,
+        message: errorMessage,
+        details: errorDetails
+      });
+      throw new Error(`${errorMessage}: ${JSON.stringify(errorDetails)}`);
     }
 
     return responseData;
   } catch (error) {
     console.error('Error in sendEmailToSMTP:', error);
+    if (error instanceof Error) {
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack
+      });
+    }
     throw error;
   }
 }

@@ -29,7 +29,8 @@ export async function POST(
       fileName: file?.name,
       userEmail,
       hasFile: !!file,
-      fileType: file?.type
+      fileType: file?.type,
+      fileSize: file?.size
     });
 
     // Validate required fields
@@ -102,7 +103,7 @@ export async function POST(
     if (!emailResult.success) {
       console.error('Failed to send email:', emailResult.details);
       return NextResponse.json(
-        { success: false, error: 'Failed to send email' },
+        { success: false, error: `Failed to send email: ${emailResult.details}` },
         { status: 500 }
       );
     }
@@ -125,6 +126,12 @@ export async function POST(
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Upload error:', error);
+    if (error instanceof Error) {
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack
+      });
+    }
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : 'Internal server error' },
       { status: 500 }
