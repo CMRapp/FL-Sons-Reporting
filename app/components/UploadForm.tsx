@@ -170,15 +170,35 @@ const UploadForm = () => {
         return newStatus;
       });
 
+      console.log('Submitting form data:', {
+        reportName,
+        fileName: files[index]?.name,
+        fileSize: files[index]?.size,
+        fileType: files[index]?.type,
+        ...sanitizedFormData
+      });
+
       const response = await fetch(`/api/upload/${index + 1}`, {
         method: 'POST',
         body: formDataToSend,
       });
 
-      const result = await response.json();
+      console.log('Response status:', response.status);
+      const responseText = await response.text();
+      console.log('Raw response:', responseText);
+
+      let result;
+      try {
+        result = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('Error parsing response:', parseError);
+        throw new Error('Invalid response from server');
+      }
+
+      console.log('Parsed response:', result);
       
       if (!response.ok || !result.success) {
-        throw new Error(result.message || result.error || 'Upload failed');
+        throw new Error(result.error || result.message || 'Upload failed');
       }
 
       // Show modal instead of alert
