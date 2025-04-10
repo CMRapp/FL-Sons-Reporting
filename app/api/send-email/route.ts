@@ -1,5 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { sendEmail, sendConfirmationEmail } from '@/app/services/emailService';
+import { NextResponse } from 'next/server';
 
 export const runtime = 'edge';
 
@@ -18,6 +17,15 @@ interface EmailData {
 
 export async function POST(request: Request) {
   try {
+    // Check if SMTP2GO API key is configured
+    if (!process.env.SMTP2GO_API_KEY) {
+      console.error('SMTP2GO_API_KEY is not configured');
+      return NextResponse.json(
+        { success: false, error: 'Email service not configured properly' },
+        { status: 500 }
+      );
+    }
+
     const data = await request.json() as EmailData;
     
     console.log('Preparing SMTP2GO email request:', {
@@ -26,6 +34,15 @@ export async function POST(request: Request) {
       subject: data.subject,
       hasAttachments: !!data.attachments
     });
+
+    // Validate required fields
+    if (!data.to || !data.from || !data.subject || !data.text || !data.html) {
+      console.error('Missing required email fields');
+      return NextResponse.json(
+        { success: false, error: 'Missing required email fields' },
+        { status: 400 }
+      );
+    }
 
     const formData = new FormData();
     formData.append('to', data.to);
@@ -42,6 +59,7 @@ export async function POST(request: Request) {
       });
     }
 
+    console.log('Sending request to SMTP2GO...');
     const response = await fetch('https://api.smtp2go.com/v3/email/send', {
       method: 'POST',
       headers: {
@@ -55,16 +73,31 @@ export async function POST(request: Request) {
     console.log('SMTP2GO response:', responseData);
 
     if (!response.ok) {
-      throw new Error(responseData.message || 'Failed to send email');
+      console.error('SMTP2GO API error:', responseData);
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: responseData.message || 'Failed to send email',
+          details: responseData
+        },
+        { status: response.status }
+      );
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error sending email:', error);
+    console.error('Error in send-email route:', error);
+    if (error instanceof Error) {
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack
+      });
+    }
     return NextResponse.json(
       { 
         success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error occurred'
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
+        details: error instanceof Error ? error.stack : undefined
       },
       { status: 500 }
     );

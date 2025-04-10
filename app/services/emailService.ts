@@ -59,12 +59,21 @@ async function sendEmailToSMTP(data: {
     console.log('Email API response:', responseData);
 
     if (!response.ok) {
-      throw new Error(responseData.error || 'Failed to send email');
+      const errorMessage = responseData.error || 'Failed to send email';
+      const errorDetails = responseData.details || responseData;
+      console.error('Email API error:', errorMessage, errorDetails);
+      throw new Error(`${errorMessage}: ${JSON.stringify(errorDetails)}`);
     }
 
     return responseData;
   } catch (error) {
     console.error('Error in sendEmailToSMTP:', error);
+    if (error instanceof Error) {
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack
+      });
+    }
     throw error;
   }
 }
