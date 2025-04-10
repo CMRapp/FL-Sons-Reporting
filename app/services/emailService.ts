@@ -1,10 +1,3 @@
-import sgMail from '@sendgrid/mail';
-
-// Initialize SendGrid
-if (process.env.SENDGRID_API_KEY) {
-  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-}
-
 interface EmailData {
   userName: string;
   userEmail: string;
