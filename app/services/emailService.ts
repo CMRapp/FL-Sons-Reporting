@@ -44,6 +44,7 @@ async function sendEmailToSMTP(data: {
     }
 
     const formData = new FormData();
+    formData.append('api_key', process.env.SMTP2GO_API_KEY);
     formData.append('to', data.to);
     formData.append('from', data.from);
     formData.append('subject', data.subject);
@@ -62,9 +63,21 @@ async function sendEmailToSMTP(data: {
     const response = await fetch('https://api.smtp2go.com/v3/email/send', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${process.env.SMTP2GO_API_KEY}`,
+        'Content-Type': 'application/json',
       },
-      body: formData,
+      body: JSON.stringify({
+        api_key: process.env.SMTP2GO_API_KEY,
+        to: [data.to],
+        sender: data.from,
+        subject: data.subject,
+        text_body: data.text,
+        html_body: data.html,
+        attachments: data.attachments?.map(attachment => ({
+          filename: attachment.filename,
+          fileblob: attachment.content,
+          mimetype: attachment.type
+        }))
+      }),
     });
 
     console.log('SMTP2GO response status:', response.status);
