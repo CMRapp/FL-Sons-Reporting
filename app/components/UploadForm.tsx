@@ -253,8 +253,8 @@ const UploadForm = () => {
         </div>
 
         <h1 className="text-3xl font-bold mb-8 text-center text-blue-800 uppercase">2024-2025 Report Submission Portal</h1>
-        <p className="text-center text-black text-xl mb-8">Please fill out the form below to submit your reports for the 2024-2025 service year.</p>
-        
+        <p className="text-center text-black text-xl">Please fill out the form below to submit your reports for the 2024-2025 service year.</p>
+        <p className="text-center text-black text-xl italic font-bold  mb-8">Send any issues or questions to <a href="mailto:adjutant@floridasons.org" className="text-blue-500">adjutant@floridasons.org</a></p>
         {/* User Information Form */}
         <div className="bg-white shadow-md rounded-lg p-6 mb-8">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
