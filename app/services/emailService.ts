@@ -39,41 +39,47 @@ async function sendEmailToSMTP(data: {
   }>;
 }) {
   try {
-    console.log('Sending email via API:', {
+    console.log('Preparing SMTP2GO email request:', {
       to: data.to,
       from: data.from,
       subject: data.subject,
       hasAttachments: !!data.attachments
     });
 
-    const response = await fetch('/api/send-email', {
+    const formData = new FormData();
+    formData.append('to', data.to);
+    formData.append('from', data.from);
+    formData.append('subject', data.subject);
+    formData.append('text', data.text);
+    formData.append('html', data.html);
+    
+    if (data.attachments) {
+      data.attachments.forEach((attachment, index) => {
+        formData.append(`attachment${index}`, attachment.content);
+        formData.append(`attachment${index}_filename`, attachment.filename);
+        formData.append(`attachment${index}_type`, attachment.type);
+      });
+    }
+
+    const response = await fetch('https://api.smtp2go.com/v3/email/send', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.SMTP2GO_API_KEY}`,
       },
-      body: JSON.stringify(data),
+      body: formData,
     });
 
-    console.log('Email API response status:', response.status);
+    console.log('SMTP2GO response status:', response.status);
     const responseData = await response.json();
-    console.log('Email API response:', responseData);
+    console.log('SMTP2GO response:', responseData);
 
     if (!response.ok) {
-      const errorMessage = responseData.error || 'Failed to send email';
-      const errorDetails = responseData.details || responseData;
-      console.error('Email API error:', errorMessage, errorDetails);
-      throw new Error(`${errorMessage}: ${JSON.stringify(errorDetails)}`);
+      throw new Error(responseData.message || 'Failed to send email');
     }
 
     return responseData;
   } catch (error) {
     console.error('Error in sendEmailToSMTP:', error);
-    if (error instanceof Error) {
-      console.error('Error details:', {
-        message: error.message,
-        stack: error.stack
-      });
-    }
     throw error;
   }
 }
