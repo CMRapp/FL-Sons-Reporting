@@ -11,6 +11,9 @@ const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'pdf'];
 // Valid report IDs
 const VALID_REPORT_IDS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
 
+// Timeout for email operations (8 seconds to stay under Vercel's 10s limit)
+const EMAIL_TIMEOUT = 8000;
+
 export async function POST(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -85,7 +88,7 @@ export async function POST(
     if (!fileExtension || !ALLOWED_EXTENSIONS.includes(fileExtension)) {
       console.error('Invalid file extension:', fileExtension);
       return NextResponse.json(
-        { success: false, message: 'Invalid file extension' },
+        { success: false, error: 'Invalid file extension' },
         { status: 400 }
       );
     }
@@ -141,8 +144,14 @@ export async function POST(
       fileBuffer: 'Buffer present'
     });
 
-    // Send email
-    const emailResult = await sendEmail(emailData);
+    // Send email with timeout
+    const emailPromise = sendEmail(emailData);
+    const emailTimeout = new Promise<{ success: boolean; details?: string }>((_, reject) => 
+      setTimeout(() => reject(new Error('Email sending timed out')), EMAIL_TIMEOUT)
+    );
+
+    const emailResult = await Promise.race([emailPromise, emailTimeout]);
+    
     if (!emailResult.success) {
       console.error('Failed to send email:', emailResult.details);
       return NextResponse.json(
@@ -151,7 +160,7 @@ export async function POST(
       );
     }
 
-    // Send confirmation email
+    // Send confirmation email with timeout
     const confirmationData = {
       userName,
       userEmail,
@@ -161,7 +170,18 @@ export async function POST(
     };
 
     console.log('Sending confirmation email with data:', confirmationData);
-    await sendConfirmationEmail(confirmationData);
+    
+    const confirmationPromise = sendConfirmationEmail(confirmationData);
+    const confirmationTimeout = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Confirmation email timed out')), EMAIL_TIMEOUT)
+    );
+
+    try {
+      await Promise.race([confirmationPromise, confirmationTimeout]);
+    } catch (error) {
+      console.error('Confirmation email timed out:', error);
+      // Don't fail the whole request if confirmation email times out
+    }
 
     return NextResponse.json(
       { success: true, message: 'File uploaded and emails sent successfully' },
