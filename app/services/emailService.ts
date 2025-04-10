@@ -1,27 +1,9 @@
-import nodemailer from 'nodemailer';
+import sgMail from '@sendgrid/mail';
 
-// SMTP configuration
-const smtpConfig = {
-  host: process.env.SMTP_HOST,
-  port: parseInt(process.env.SMTP_PORT || '587', 10),
-  secure: process.env.SMTP_SECURE === 'true',
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-};
-
-// Create SMTP transporter
-const transporter = nodemailer.createTransport(smtpConfig);
-
-// Verify SMTP connection
-transporter.verify((error) => {
-  if (error) {
-    console.error('SMTP connection error:', error);
-  } else {
-    console.log('SMTP connection verified');
-  }
-});
+// Initialize SendGrid
+if (process.env.SENDGRID_API_KEY) {
+  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+}
 
 interface EmailData {
   userName: string;
@@ -32,7 +14,7 @@ interface EmailData {
   reportName: string;
   fileName: string;
   reportId: string;
-  fileBuffer: string; // Base64 string instead of Buffer
+  fileBuffer: string; // Base64 string
   fileType: string;
 }
 
@@ -44,11 +26,53 @@ interface ConfirmationEmailData {
   submissionDateTime: string;
 }
 
+async function sendEmailToSMTP(data: {
+  to: string;
+  from: string;
+  subject: string;
+  text: string;
+  html: string;
+  attachments?: Array<{
+    content: string;
+    filename: string;
+    type: string;
+  }>;
+}) {
+  const formData = new FormData();
+  formData.append('to', data.to);
+  formData.append('from', data.from);
+  formData.append('subject', data.subject);
+  formData.append('text', data.text);
+  formData.append('html', data.html);
+  
+  if (data.attachments) {
+    data.attachments.forEach((attachment, index) => {
+      formData.append(`attachment${index}`, attachment.content);
+      formData.append(`attachment${index}_filename`, attachment.filename);
+      formData.append(`attachment${index}_type`, attachment.type);
+    });
+  }
+
+  const response = await fetch('https://api.smtp2go.com/v3/email/send', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${process.env.SMTP2GO_API_KEY}`,
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to send email');
+  }
+
+  return response.json();
+}
+
 export async function sendEmail(data: EmailData) {
   try {
-    // Validate SMTP configuration
-    if (!smtpConfig.host || !smtpConfig.auth.user || !smtpConfig.auth.pass) {
-      console.error('SMTP configuration is incomplete');
+    if (!process.env.SMTP2GO_API_KEY) {
+      console.error('SMTP2GO API key not configured');
       return { success: false, details: 'Email service not configured properly' };
     }
 
@@ -88,10 +112,9 @@ export async function sendEmail(data: EmailData) {
       fileSize: data.fileBuffer.length
     });
 
-    // Create email content
-    const mailOptions = {
-      from: `"Florida Sons Reporting Portal" <${process.env.SMTP_USER}>`,
+    const emailData = {
       to: toEmail,
+      from: process.env.SMTP_FROM_EMAIL || 'noreply@floridasons.org',
       subject: `New ${data.reportName} Report Submission`,
       text: `
 New Report Submission
@@ -114,15 +137,15 @@ File: ${data.fileName}
         <p><strong>File:</strong> ${data.fileName}</p>
       `,
       attachments: [{
-        filename: data.fileName,
         content: data.fileBuffer,
-        encoding: 'base64'
+        filename: data.fileName,
+        type: data.fileType
       }]
     };
 
     console.log('Sending email to:', toEmail);
-    const info = await transporter.sendMail(mailOptions);
-    console.log('Email sent successfully:', info.messageId);
+    await sendEmailToSMTP(emailData);
+    console.log('Email sent successfully');
     return { success: true };
   } catch (error) {
     console.error('Error sending email:', error);
@@ -135,18 +158,16 @@ File: ${data.fileName}
 
 export async function sendConfirmationEmail(data: ConfirmationEmailData) {
   try {
-    // Validate SMTP configuration
-    if (!smtpConfig.host || !smtpConfig.auth.user || !smtpConfig.auth.pass) {
-      console.error('SMTP configuration is incomplete');
+    if (!process.env.SMTP2GO_API_KEY) {
+      console.error('SMTP2GO API key not configured');
       return { success: false, details: 'Email service not configured properly' };
     }
 
     console.log('Preparing confirmation email for:', data.userEmail);
 
-    // Create email content
-    const mailOptions = {
-      from: `"Florida Sons Reporting Portal" <${process.env.SMTP_USER}>`,
+    const emailData = {
       to: data.userEmail,
+      from: process.env.SMTP_FROM_EMAIL || 'noreply@floridasons.org',
       subject: `Confirmation: ${data.reportName} Report Submission`,
       text: `
 Thank you for submitting your ${data.reportName} report.
@@ -173,8 +194,8 @@ Submission Details:
     };
 
     console.log('Sending confirmation email to:', data.userEmail);
-    const info = await transporter.sendMail(mailOptions);
-    console.log('Confirmation email sent successfully:', info.messageId);
+    await sendEmailToSMTP(emailData);
+    console.log('Confirmation email sent successfully');
     return { success: true };
   } catch (error) {
     console.error('Error sending confirmation email:', error);
