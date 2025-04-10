@@ -11,8 +11,10 @@ const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'pdf'];
 // Valid report IDs
 const VALID_REPORT_IDS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
 
+export const runtime = 'edge';
+
 export async function POST(
-  request: NextRequest,
+  request: Request,
   { params }: { params: { id: string } }
 ) {
   try {

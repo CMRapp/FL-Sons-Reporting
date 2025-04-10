@@ -85,44 +85,42 @@ export async function sendEmail(data: EmailData) {
       return { success: false, details: 'Email service not configured properly' };
     }
 
-    // Get the appropriate email address based on report type
-    let toEmail = process.env.EMAIL_TO;
-    if (data.reportId === '1') {
-      toEmail = process.env.EMAIL_1 || toEmail;
-    } else if (data.reportId === '2') {
-      toEmail = process.env.EMAIL_2 || toEmail;
+    // Get the appropriate recipient email based on report type
+    let recipientEmail = process.env.EMAIL_1; // Default to NCSR
+    if (data.reportId === '2') {
+      recipientEmail = process.env.EMAIL_2; // DCSR
     } else if (data.reportId === '3') {
-      toEmail = process.env.EMAIL_3 || toEmail;
+      recipientEmail = process.env.EMAIL_3; // VA&R
     } else if (data.reportId === '4') {
-      toEmail = process.env.EMAIL_4 || toEmail;
+      recipientEmail = process.env.EMAIL_4; // VAVS-VOY
     } else if (data.reportId === '5') {
-      toEmail = process.env.EMAIL_5 || toEmail;
+      recipientEmail = process.env.EMAIL_5; // AMERICANISM
     } else if (data.reportId === '6') {
-      toEmail = process.env.EMAIL_6 || toEmail;
+      recipientEmail = process.env.EMAIL_6; // C&Y
     } else if (data.reportId === '7') {
-      toEmail = process.env.EMAIL_7 || toEmail;
+      recipientEmail = process.env.EMAIL_7; // SIR
     } else if (data.reportId === '8') {
-      toEmail = process.env.EMAIL_8 || toEmail;
+      recipientEmail = process.env.EMAIL_8; // SDR
     } else if (data.reportId === '9') {
-      toEmail = process.env.EMAIL_9 || toEmail;
+      recipientEmail = process.env.EMAIL_9; // SOC
     } else if (data.reportId === '10') {
-      toEmail = process.env.EMAIL_10 || toEmail;
+      recipientEmail = process.env.EMAIL_10; // DOR
     }
 
-    if (!toEmail) {
-      console.error('No recipient email address configured');
-      return { success: false, details: 'No recipient email address configured' };
+    if (!recipientEmail) {
+      console.error('No recipient email address configured for report type:', data.reportId);
+      return { success: false, details: 'No recipient email address configured for this report type' };
     }
 
     console.log('Preparing email with data:', {
-      to: toEmail,
+      to: recipientEmail,
       reportName: data.reportName,
       fileName: data.fileName,
       fileSize: data.fileBuffer.length
     });
 
     const emailData = {
-      to: toEmail,
+      to: recipientEmail,
       from: process.env.SMTP_FROM_EMAIL || 'noreply@floridasons.org',
       subject: `New ${data.reportName} Report Submission`,
       text: `
@@ -152,7 +150,7 @@ File: ${data.fileName}
       }]
     };
 
-    console.log('Sending email to:', toEmail);
+    console.log('Sending email to:', recipientEmail);
     await sendEmailToSMTP(emailData);
     console.log('Email sent successfully');
     return { success: true };
@@ -175,7 +173,7 @@ export async function sendConfirmationEmail(data: ConfirmationEmailData) {
     console.log('Preparing confirmation email for:', data.userEmail);
 
     const emailData = {
-      to: data.userEmail,
+      to: data.userEmail, // Send confirmation to the user's email
       from: process.env.SMTP_FROM_EMAIL || 'noreply@floridasons.org',
       subject: `Confirmation: ${data.reportName} Report Submission`,
       text: `
