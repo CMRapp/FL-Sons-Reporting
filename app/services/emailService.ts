@@ -3,8 +3,8 @@ import nodemailer from 'nodemailer';
 // Create SMTP transporter
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT),
-  secure: true,
+  port: parseInt(process.env.SMTP_PORT || '587'),
+  secure: process.env.SMTP_SECURE === 'true',
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
@@ -20,8 +20,8 @@ interface EmailData {
   reportName: string;
   fileName: string;
   reportId: string;
-  fileBuffer?: Buffer;
-  fileType?: string;
+  fileBuffer: Buffer;
+  fileType: string;
 }
 
 interface ConfirmationEmailData {
@@ -32,20 +32,16 @@ interface ConfirmationEmailData {
   submissionDateTime: string;
 }
 
-export async function sendEmail(data: EmailData) {
+export const sendEmail = async (data: EmailData): Promise<{ success: boolean; details?: string }> => {
   try {
-    console.log('Preparing email with data:', {
-      ...data,
-      timestamp: new Date().toISOString(),
+    console.log('Preparing email:', {
+      to: process.env.EMAIL_TO,
+      userName: data.userName,
+      userEmail: data.userEmail,
+      reportName: data.reportName,
+      fileName: data.fileName,
+      timestamp: new Date().toISOString()
     });
-
-    // Get the appropriate recipient email based on report ID
-    const recipientEmail = process.env[`EMAIL_${data.reportId}`] || process.env.ADMIN_EMAIL;
-    
-    if (!recipientEmail) {
-      console.error('No recipient email configured for report ID:', data.reportId);
-      throw new Error('No recipient email configured');
-    }
 
     // Check if SMTP configuration is complete
     if (!process.env.SMTP_HOST || !process.env.SMTP_PORT || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
@@ -55,7 +51,7 @@ export async function sendEmail(data: EmailData) {
         user: process.env.SMTP_USER ? 'configured' : 'missing',
         pass: process.env.SMTP_PASS ? 'configured' : 'missing'
       });
-      throw new Error('Incomplete SMTP configuration');
+      return { success: false, details: 'Incomplete SMTP configuration' };
     }
 
     // Verify SMTP connection
@@ -67,67 +63,70 @@ export async function sendEmail(data: EmailData) {
         error: error instanceof Error ? error.message : 'Unknown error',
         stack: error instanceof Error ? error.stack : undefined
       });
-      throw new Error('Failed to connect to SMTP server');
+      return { success: false, details: 'Failed to connect to SMTP server' };
     }
 
-    // Construct email content
+    const subject = `New ${data.reportName} Submission from ${data.userName}`;
+    const text = `A new ${data.reportName} has been submitted by ${data.userName} (${data.userTitle}) from Squadron ${data.squadronNumber}, District ${data.districtNumber}.`;
+    
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2>New ${data.reportName} Submission</h2>
+        <p><strong>Submitted by:</strong> ${data.userName} (${data.userTitle})</p>
+        <p><strong>Squadron:</strong> ${data.squadronNumber}</p>
+        <p><strong>District:</strong> ${data.districtNumber}</p>
+        <p><strong>File:</strong> ${data.fileName}</p>
+        <p><strong>Submitted on:</strong> ${new Date().toLocaleString()}</p>
+      </div>
+    `;
+
     const mailOptions = {
       from: process.env.SMTP_USER,
-      to: recipientEmail,
-      subject: `New ${data.reportName} Upload`,
-      html: `
-        <h2>New Report Upload</h2>
-        <p><strong>Report:</strong> ${data.reportName}</p>
-        <p><strong>Submitted By:</strong> ${data.userName}</p>
-        <p><strong>Title:</strong> ${data.userTitle}</p>
-        <p><strong>Squadron Number:</strong> ${data.squadronNumber}</p>
-        <p><strong>District Number:</strong> ${data.districtNumber}</p>
-        <p><strong>Email:</strong> ${data.userEmail}</p>
-        <p><strong>File:</strong> ${data.fileName}</p>
-      `,
-      attachments: data.fileBuffer ? [
+      to: process.env.EMAIL_TO,
+      subject,
+      text,
+      html,
+      attachments: [
         {
           filename: data.fileName,
           content: data.fileBuffer,
           contentType: data.fileType
         }
-      ] : undefined
+      ]
     };
 
-    console.log('Sending email to:', recipientEmail);
+    console.log('Sending email with options:', {
+      ...mailOptions,
+      from: mailOptions.from,
+      to: mailOptions.to,
+      subject: mailOptions.subject
+    });
 
-    // Send email
     const info = await transporter.sendMail(mailOptions);
-
+    
     console.log('Email sent successfully:', {
       messageId: info.messageId,
       response: info.response,
-      timestamp: new Date().toISOString(),
+      timestamp: new Date().toISOString()
     });
 
-    return {
-      success: true,
-      details: {
-        messageId: info.messageId,
-        response: info.response,
-      },
-    };
+    return { success: true };
   } catch (error) {
     console.error('Error sending email:', {
       error: error instanceof Error ? error.message : 'Unknown error',
       stack: error instanceof Error ? error.stack : undefined,
       data: {
         ...data,
-        timestamp: new Date().toISOString(),
-      },
+        fileBuffer: 'Buffer present',
+        timestamp: new Date().toISOString()
+      }
     });
-
-    return {
-      success: false,
-      details: error instanceof Error ? error.message : 'Unknown error',
+    return { 
+      success: false, 
+      details: error instanceof Error ? error.message : 'Unknown error occurred while sending email'
     };
   }
-}
+};
 
 export const sendConfirmationEmail = async (data: ConfirmationEmailData): Promise<void> => {
   try {
