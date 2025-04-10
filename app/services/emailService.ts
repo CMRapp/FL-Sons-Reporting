@@ -14,7 +14,7 @@ interface EmailData {
   reportName: string;
   fileName: string;
   reportId: string;
-  fileBuffer: string; // Base64 string
+  fileBuffer: string;
   fileType: string;
 }
 
@@ -38,35 +38,50 @@ async function sendEmailToSMTP(data: {
     type: string;
   }>;
 }) {
-  const formData = new FormData();
-  formData.append('to', data.to);
-  formData.append('from', data.from);
-  formData.append('subject', data.subject);
-  formData.append('text', data.text);
-  formData.append('html', data.html);
-  
-  if (data.attachments) {
-    data.attachments.forEach((attachment, index) => {
-      formData.append(`attachment${index}`, attachment.content);
-      formData.append(`attachment${index}_filename`, attachment.filename);
-      formData.append(`attachment${index}_type`, attachment.type);
+  try {
+    console.log('Preparing SMTP2GO email request:', {
+      to: data.to,
+      from: data.from,
+      subject: data.subject,
+      hasAttachments: !!data.attachments
     });
+
+    const formData = new FormData();
+    formData.append('to', data.to);
+    formData.append('from', data.from);
+    formData.append('subject', data.subject);
+    formData.append('text', data.text);
+    formData.append('html', data.html);
+    
+    if (data.attachments) {
+      data.attachments.forEach((attachment, index) => {
+        formData.append(`attachment${index}`, attachment.content);
+        formData.append(`attachment${index}_filename`, attachment.filename);
+        formData.append(`attachment${index}_type`, attachment.type);
+      });
+    }
+
+    const response = await fetch('https://api.smtp2go.com/v3/email/send', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.SMTP2GO_API_KEY}`,
+      },
+      body: formData,
+    });
+
+    console.log('SMTP2GO response status:', response.status);
+    const responseData = await response.json();
+    console.log('SMTP2GO response:', responseData);
+
+    if (!response.ok) {
+      throw new Error(responseData.message || 'Failed to send email');
+    }
+
+    return responseData;
+  } catch (error) {
+    console.error('Error in sendEmailToSMTP:', error);
+    throw error;
   }
-
-  const response = await fetch('https://api.smtp2go.com/v3/email/send', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${process.env.SMTP2GO_API_KEY}`,
-    },
-    body: formData,
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to send email');
-  }
-
-  return response.json();
 }
 
 export async function sendEmail(data: EmailData) {
@@ -79,25 +94,25 @@ export async function sendEmail(data: EmailData) {
     // Get the appropriate email address based on report type
     let toEmail = process.env.EMAIL_TO;
     if (data.reportId === '1') {
-      toEmail = process.env.EMAIL_TO_NCSR || toEmail;
+      toEmail = process.env.EMAIL_1 || toEmail;
     } else if (data.reportId === '2') {
-      toEmail = process.env.EMAIL_TO_DCSR || toEmail;
+      toEmail = process.env.EMAIL_2 || toEmail;
     } else if (data.reportId === '3') {
-      toEmail = process.env.EMAIL_TO_VAR || toEmail;
+      toEmail = process.env.EMAIL_3 || toEmail;
     } else if (data.reportId === '4') {
-      toEmail = process.env.EMAIL_TO_VAVS || toEmail;
+      toEmail = process.env.EMAIL_4 || toEmail;
     } else if (data.reportId === '5') {
-      toEmail = process.env.EMAIL_TO_AMERICANISM || toEmail;
+      toEmail = process.env.EMAIL_5 || toEmail;
     } else if (data.reportId === '6') {
-      toEmail = process.env.EMAIL_TO_CY || toEmail;
+      toEmail = process.env.EMAIL_6 || toEmail;
     } else if (data.reportId === '7') {
-      toEmail = process.env.EMAIL_TO_SIR || toEmail;
+      toEmail = process.env.EMAIL_7 || toEmail;
     } else if (data.reportId === '8') {
-      toEmail = process.env.EMAIL_TO_SDR || toEmail;
+      toEmail = process.env.EMAIL_8 || toEmail;
     } else if (data.reportId === '9') {
-      toEmail = process.env.EMAIL_TO_SOC || toEmail;
+      toEmail = process.env.EMAIL_9 || toEmail;
     } else if (data.reportId === '10') {
-      toEmail = process.env.EMAIL_TO_DOR || toEmail;
+      toEmail = process.env.EMAIL_10 || toEmail;
     }
 
     if (!toEmail) {

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { sendEmail, sendConfirmationEmail } from '@/app/services/emailService';
 
 // Maximum file size (10MB)
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -15,154 +16,104 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const reportId = params.id;
-    console.log('Received upload request for report:', reportId);
-
-    // Validate report ID
-    if (!reportId || !VALID_REPORT_IDS.includes(reportId)) {
-      console.error('Invalid report ID:', reportId);
-      return NextResponse.json(
-        { success: false, error: 'Invalid report ID' },
-        { status: 400 }
-      );
-    }
-
-    const formData = await request.formData();
-    const file = formData.get('file') as File;
-    const userName = formData.get('userName') as string;
-    const userEmail = formData.get('userEmail') as string;
-    const userTitle = formData.get('userTitle') as string;
-    const squadronNumber = formData.get('squadronNumber') as string;
-    const districtNumber = formData.get('districtNumber') as string;
-
-    console.log('Processing upload with data:', {
-      reportId,
-      fileName: file?.name,
-      userName,
-      userEmail,
-      userTitle,
-      squadronNumber,
-      districtNumber
+    console.log('Received upload request for report ID:', params.id);
+    
+    const data = await request.json();
+    console.log('Received data:', {
+      reportName: data.reportName,
+      fileName: data.fileName,
+      userEmail: data.userEmail,
+      hasFileBuffer: !!data.fileBuffer,
+      fileType: data.fileType
     });
 
     // Validate required fields
-    if (!file || !userName || !userEmail || !userTitle || !squadronNumber || !districtNumber) {
+    if (!data.userName || !data.userEmail || !data.userTitle || 
+        !data.squadronNumber || !data.districtNumber || !data.fileBuffer) {
       console.error('Missing required fields:', {
-        file: !!file,
-        userName: !!userName,
-        userEmail: !!userEmail,
-        userTitle: !!userTitle,
-        squadronNumber: !!squadronNumber,
-        districtNumber: !!districtNumber
+        userName: !!data.userName,
+        userEmail: !!data.userEmail,
+        userTitle: !!data.userTitle,
+        squadronNumber: !!data.squadronNumber,
+        districtNumber: !!data.districtNumber,
+        fileBuffer: !!data.fileBuffer
       });
       return NextResponse.json(
-        { success: false, error: 'All fields are required' },
+        { error: 'Missing required fields' },
         { status: 400 }
       );
     }
 
     // Validate file type
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      console.error('Invalid file type:', file.type);
+    const allowedTypes = ['.xlsx', '.xls', '.docx', '.doc', '.pdf'];
+    const fileExtension = data.fileName.split('.').pop()?.toLowerCase();
+    if (!fileExtension || !allowedTypes.includes(`.${fileExtension}`)) {
+      console.error('Invalid file type:', fileExtension);
       return NextResponse.json(
-        { success: false, error: 'Invalid file type. Please upload a PDF, JPEG, or PNG file.' },
+        { error: 'Invalid file type. Allowed types: .xlsx, .xls, .docx, .doc, .pdf' },
         { status: 400 }
       );
     }
 
     // Validate file size (10MB limit)
-    if (file.size > MAX_FILE_SIZE) {
-      console.error('File too large:', file.size);
+    const fileSize = (data.fileBuffer.length * 3) / 4; // Approximate size in bytes
+    if (fileSize > 10 * 1024 * 1024) {
+      console.error('File too large:', fileSize);
       return NextResponse.json(
-        { success: false, error: 'File size exceeds 10MB limit' },
+        { error: 'File size exceeds 10MB limit' },
         { status: 400 }
       );
     }
 
-    // Get file extension
-    const fileExtension = file.name.split('.').pop()?.toLowerCase();
-    if (!fileExtension || !ALLOWED_EXTENSIONS.includes(fileExtension)) {
-      console.error('Invalid file extension:', fileExtension);
-      return NextResponse.json(
-        { success: false, error: 'Invalid file extension' },
-        { status: 400 }
-      );
-    }
-
-    // Get report name based on ID
-    const reportName = reportId === '1' ? 'NCSR' :
-                      reportId === '2' ? 'DCSR' :
-                      reportId === '3' ? 'VA&R' :
-                      reportId === '4' ? 'VAVS-VOY' :
-                      reportId === '5' ? 'AMERICANISM' :
-                      reportId === '6' ? 'C&Y' :
-                      reportId === '7' ? 'SIR' :
-                      reportId === '8' ? 'SDR' :
-                      reportId === '9' ? 'SOC' :
-                      'DOR';
-
-    // Create filename with MMDDYYYY format
-    const now = new Date();
-    const dateStr = now.toLocaleDateString('en-US', {
-      month: '2-digit',
-      day: '2-digit',
-      year: 'numeric'
-    }).replace(/\//g, '');
-
-    const fileName = `FLSQ-${squadronNumber}-${reportName}-${dateStr}.${fileExtension}`;
-
-    console.log('Processing file:', {
-      fileName,
-      fileSize: file.size,
-      fileType: file.type
+    console.log('Sending email...');
+    const emailResult = await sendEmail({
+      userName: data.userName,
+      userEmail: data.userEmail,
+      userTitle: data.userTitle,
+      squadronNumber: data.squadronNumber,
+      districtNumber: data.districtNumber,
+      reportName: data.reportName,
+      fileName: data.fileName,
+      reportId: params.id,
+      fileBuffer: data.fileBuffer,
+      fileType: data.fileType
     });
 
-    // Convert file to buffer
-    const buffer = Buffer.from(await file.arrayBuffer());
-    console.log('File converted to buffer, size:', buffer.length);
-
-    // Prepare email data
-    const emailData = {
-      userName,
-      userEmail,
-      userTitle,
-      squadronNumber,
-      districtNumber,
-      reportName,
-      fileName,
-      reportId,
-      fileBuffer: buffer.toString('base64'),
-      fileType: file.type
-    };
-
-    // Send to background job
-    const response = await fetch(`${request.nextUrl.origin}/api/send-email`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(emailData),
-    });
-
-    if (!response.ok) {
-      console.error('Failed to queue email job:', await response.text());
+    if (!emailResult.success) {
+      console.error('Failed to send email:', emailResult.details);
       return NextResponse.json(
-        { success: false, error: 'Failed to queue email job' },
+        { error: emailResult.details || 'Failed to send email' },
         { status: 500 }
       );
     }
 
-    return NextResponse.json(
-      { success: true, message: 'File uploaded and email job queued successfully' },
-      { status: 200 }
-    );
-  } catch (error) {
-    console.error('Error processing upload:', {
-      error: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined
+    console.log('Sending confirmation email...');
+    const confirmationResult = await sendConfirmationEmail({
+      userName: data.userName,
+      userEmail: data.userEmail,
+      reportName: data.reportName,
+      fileName: data.fileName,
+      submissionDateTime: new Date().toLocaleString()
     });
+
+    if (!confirmationResult.success) {
+      console.error('Failed to send confirmation email:', confirmationResult.details);
+      // Don't fail the whole request if confirmation email fails
+      console.log('Continuing despite confirmation email failure');
+    }
+
+    console.log('Upload and email process completed successfully');
+    return NextResponse.json({ message: 'File uploaded and email sent successfully' });
+  } catch (error) {
+    console.error('Error in upload handler:', error);
+    if (error instanceof Error) {
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack
+      });
+    }
     return NextResponse.json(
-      { success: false, error: 'An error occurred while processing the upload' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }

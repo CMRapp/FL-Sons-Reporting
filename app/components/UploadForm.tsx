@@ -30,6 +30,7 @@ const UploadForm = () => {
   const [modalMessage, setModalMessage] = useState('');
   const [currentReportName, setCurrentReportName] = useState('');
   const [focusedReport, setFocusedReport] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -163,6 +164,9 @@ const UploadForm = () => {
     });
 
     try {
+      console.log('Starting file upload process...');
+      console.log('Selected file:', files[index]?.name, 'Size:', files[index]?.size);
+      
       // Only set uploading status for the current index
       setUploadStatus(prev => {
         const newStatus = [...prev];
