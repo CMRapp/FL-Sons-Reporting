@@ -16,60 +16,66 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
+    const reportId = params.id;
+    console.log('Received upload request for report:', reportId);
+
     // Validate report ID
-    if (!VALID_REPORT_IDS.includes(params.id)) {
-      console.error('Invalid report ID:', params.id);
+    if (!reportId || !VALID_REPORT_IDS.includes(reportId)) {
+      console.error('Invalid report ID:', reportId);
       return NextResponse.json(
-        { success: false, message: 'Invalid report ID' },
+        { success: false, error: 'Invalid report ID' },
         { status: 400 }
       );
     }
-
-    console.log('Processing upload request:', {
-      reportId: params.id,
-      timestamp: new Date().toISOString(),
-    });
 
     const formData = await request.formData();
     const file = formData.get('file') as File;
-    
-    if (!file) {
-      console.error('No file provided in request');
-      return NextResponse.json(
-        { success: false, message: 'No file uploaded' },
-        { status: 400 }
-      );
-    }
-
-    // Validate file type and size
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      console.error('Invalid file type:', file.type);
-      return NextResponse.json(
-        { success: false, message: 'Invalid file type' },
-        { status: 400 }
-      );
-    }
-
-    if (file.size > MAX_FILE_SIZE) {
-      console.error('File too large:', file.size);
-      return NextResponse.json(
-        { success: false, message: 'File too large' },
-        { status: 400 }
-      );
-    }
-
-    // Get form data
     const userName = formData.get('userName') as string;
     const userEmail = formData.get('userEmail') as string;
     const userTitle = formData.get('userTitle') as string;
     const squadronNumber = formData.get('squadronNumber') as string;
     const districtNumber = formData.get('districtNumber') as string;
 
+    console.log('Processing upload with data:', {
+      reportId,
+      fileName: file?.name,
+      userName,
+      userEmail,
+      userTitle,
+      squadronNumber,
+      districtNumber
+    });
+
     // Validate required fields
-    if (!userName || !userEmail || !userTitle || !squadronNumber || !districtNumber) {
-      console.error('Missing required fields:', { userName, userEmail, userTitle, squadronNumber, districtNumber });
+    if (!file || !userName || !userEmail || !userTitle || !squadronNumber || !districtNumber) {
+      console.error('Missing required fields:', {
+        file: !!file,
+        userName: !!userName,
+        userEmail: !!userEmail,
+        userTitle: !!userTitle,
+        squadronNumber: !!squadronNumber,
+        districtNumber: !!districtNumber
+      });
       return NextResponse.json(
-        { success: false, message: 'Missing required fields' },
+        { success: false, error: 'All fields are required' },
+        { status: 400 }
+      );
+    }
+
+    // Validate file type
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      console.error('Invalid file type:', file.type);
+      return NextResponse.json(
+        { success: false, error: 'Invalid file type. Please upload a PDF, JPEG, or PNG file.' },
+        { status: 400 }
+      );
+    }
+
+    // Validate file size (10MB limit)
+    if (file.size > MAX_FILE_SIZE) {
+      console.error('File too large:', file.size);
+      return NextResponse.json(
+        { success: false, error: 'File size exceeds 10MB limit' },
         { status: 400 }
       );
     }
@@ -85,15 +91,15 @@ export async function POST(
     }
 
     // Get report name based on ID
-    const reportName = params.id === '1' ? 'NCSR' :
-                      params.id === '2' ? 'DCSR' :
-                      params.id === '3' ? 'VA&R' :
-                      params.id === '4' ? 'VAVS-VOY' :
-                      params.id === '5' ? 'AMERICANISM' :
-                      params.id === '6' ? 'C&Y' :
-                      params.id === '7' ? 'SIR' :
-                      params.id === '8' ? 'SDR' :
-                      params.id === '9' ? 'SOC' :
+    const reportName = reportId === '1' ? 'NCSR' :
+                      reportId === '2' ? 'DCSR' :
+                      reportId === '3' ? 'VA&R' :
+                      reportId === '4' ? 'VAVS-VOY' :
+                      reportId === '5' ? 'AMERICANISM' :
+                      reportId === '6' ? 'C&Y' :
+                      reportId === '7' ? 'SIR' :
+                      reportId === '8' ? 'SDR' :
+                      reportId === '9' ? 'SOC' :
                       'DOR';
 
     // Create filename with MMDDYYYY format
@@ -112,12 +118,12 @@ export async function POST(
       fileType: file.type
     });
 
-    // Convert file to buffer for email attachment
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
+    // Convert file to buffer
+    const buffer = Buffer.from(await file.arrayBuffer());
+    console.log('File converted to buffer, size:', buffer.length);
 
-    // Send confirmation emails
-    const emailResult = await sendEmail({
+    // Prepare email data
+    const emailData = {
       userName,
       userEmail,
       userTitle,
@@ -125,62 +131,49 @@ export async function POST(
       districtNumber,
       reportName,
       fileName,
-      reportId: params.id,
+      reportId,
       fileBuffer: buffer,
       fileType: file.type
+    };
+
+    console.log('Sending email with data:', {
+      ...emailData,
+      fileBuffer: 'Buffer present'
     });
 
+    // Send email
+    const emailResult = await sendEmail(emailData);
     if (!emailResult.success) {
       console.error('Failed to send email:', emailResult.details);
       return NextResponse.json(
-        { 
-          success: false, 
-          message: 'Failed to send email',
-          error: typeof emailResult.details === 'string' ? emailResult.details : 'Unknown error'
-        },
+        { success: false, error: 'Failed to send email' },
         { status: 500 }
       );
     }
 
-    try {
-      await sendConfirmationEmail({
-        userName,
-        userEmail,
-        reportName,
-        fileName,
-        submissionDateTime: new Date().toLocaleString('en-US', {
-          month: '2-digit',
-          day: '2-digit',
-          year: 'numeric',
-          hour: 'numeric',
-          minute: '2-digit',
-          hour12: true
-        })
-      });
-    } catch (error) {
-      console.error('Failed to send confirmation email:', error);
-      // Don't throw here, as the main email was sent successfully
-    }
+    // Send confirmation email
+    const confirmationData = {
+      userName,
+      userEmail,
+      reportName,
+      fileName,
+      submissionDateTime: new Date().toLocaleString()
+    };
 
-    return NextResponse.json({
-      success: true,
-      message: 'File uploaded successfully',
-      fileName: fileName,
-    });
+    console.log('Sending confirmation email with data:', confirmationData);
+    await sendConfirmationEmail(confirmationData);
 
+    return NextResponse.json(
+      { success: true, message: 'File uploaded and emails sent successfully' },
+      { status: 200 }
+    );
   } catch (error) {
     console.error('Error processing upload:', {
       error: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined,
-      timestamp: new Date().toISOString()
+      stack: error instanceof Error ? error.stack : undefined
     });
-    
     return NextResponse.json(
-      { 
-        success: false,
-        message: 'Error processing upload',
-        error: error instanceof Error ? error.message : 'Unknown error'
-      },
+      { success: false, error: 'An error occurred while processing the upload' },
       { status: 500 }
     );
   }
