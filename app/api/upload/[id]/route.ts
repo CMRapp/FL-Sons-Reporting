@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sendEmail, sendConfirmationEmail } from '@/app/services/emailService';
 
 // Maximum file size (10MB)
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -10,9 +9,6 @@ const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'pdf'];
 
 // Valid report IDs
 const VALID_REPORT_IDS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
-
-// Timeout for email operations (8 seconds to stay under Vercel's 10s limit)
-const EMAIL_TIMEOUT = 8000;
 
 export async function POST(
   request: NextRequest,
@@ -135,56 +131,29 @@ export async function POST(
       reportName,
       fileName,
       reportId,
-      fileBuffer: buffer,
+      fileBuffer: buffer.toString('base64'),
       fileType: file.type
     };
 
-    console.log('Sending email with data:', {
-      ...emailData,
-      fileBuffer: 'Buffer present'
+    // Send to background job
+    const response = await fetch(`${request.nextUrl.origin}/api/send-email`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(emailData),
     });
 
-    // Send email with timeout
-    const emailPromise = sendEmail(emailData);
-    const emailTimeout = new Promise<{ success: boolean; details?: string }>((_, reject) => 
-      setTimeout(() => reject(new Error('Email sending timed out')), EMAIL_TIMEOUT)
-    );
-
-    const emailResult = await Promise.race([emailPromise, emailTimeout]);
-    
-    if (!emailResult.success) {
-      console.error('Failed to send email:', emailResult.details);
+    if (!response.ok) {
+      console.error('Failed to queue email job:', await response.text());
       return NextResponse.json(
-        { success: false, error: 'Failed to send email' },
+        { success: false, error: 'Failed to queue email job' },
         { status: 500 }
       );
     }
 
-    // Send confirmation email with timeout
-    const confirmationData = {
-      userName,
-      userEmail,
-      reportName,
-      fileName,
-      submissionDateTime: new Date().toLocaleString()
-    };
-
-    console.log('Sending confirmation email with data:', confirmationData);
-    
-    const confirmationPromise = sendConfirmationEmail(confirmationData);
-    const confirmationTimeout = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Confirmation email timed out')), EMAIL_TIMEOUT)
-    );
-
-    try {
-      await Promise.race([confirmationPromise, confirmationTimeout]);
-    } catch (error) {
-      console.error('Confirmation email timed out:', error);
-      // Don't fail the whole request if confirmation email times out
-    }
-
     return NextResponse.json(
-      { success: true, message: 'File uploaded and emails sent successfully' },
+      { success: true, message: 'File uploaded and email job queued successfully' },
       { status: 200 }
     );
   } catch (error) {
