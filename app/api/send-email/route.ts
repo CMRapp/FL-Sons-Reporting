@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
       reportName: data.reportName,
       fileName: data.fileName,
       reportId: data.reportId,
-      fileBuffer: Buffer.from(data.fileBuffer),
+      fileBuffer: data.fileBuffer, // Already a base64 string
       fileType: data.fileType
     });
 
@@ -35,13 +35,18 @@ export async function POST(request: NextRequest) {
     }
 
     // Send confirmation email
-    await sendConfirmationEmail({
+    const confirmationResult = await sendConfirmationEmail({
       userName: data.userName,
       userEmail: data.userEmail,
       reportName: data.reportName,
       fileName: data.fileName,
       submissionDateTime: new Date().toLocaleString()
     });
+
+    if (!confirmationResult.success) {
+      console.error('Failed to send confirmation email:', confirmationResult.details);
+      // Don't fail the whole request if confirmation email fails
+    }
 
     return NextResponse.json(
       { success: true, message: 'Emails sent successfully' },
