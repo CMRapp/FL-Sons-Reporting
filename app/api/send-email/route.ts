@@ -3,62 +3,69 @@ import { sendEmail, sendConfirmationEmail } from '@/app/services/emailService';
 
 export const runtime = 'edge';
 
-export async function POST(request: NextRequest) {
+interface EmailData {
+  to: string;
+  from: string;
+  subject: string;
+  text: string;
+  html: string;
+  attachments?: Array<{
+    content: string;
+    filename: string;
+    type: string;
+  }>;
+}
+
+export async function POST(request: Request) {
   try {
-    const data = await request.json();
-    console.log('Processing background email job:', {
-      reportName: data.reportName,
-      fileName: data.fileName,
-      userEmail: data.userEmail
+    const data = await request.json() as EmailData;
+    
+    console.log('Preparing SMTP2GO email request:', {
+      to: data.to,
+      from: data.from,
+      subject: data.subject,
+      hasAttachments: !!data.attachments
     });
 
-    // Send main email
-    const emailResult = await sendEmail({
-      userName: data.userName,
-      userEmail: data.userEmail,
-      userTitle: data.userTitle,
-      squadronNumber: data.squadronNumber,
-      districtNumber: data.districtNumber,
-      reportName: data.reportName,
-      fileName: data.fileName,
-      reportId: data.reportId,
-      fileBuffer: data.fileBuffer, // Already a base64 string
-      fileType: data.fileType
-    });
-
-    if (!emailResult.success) {
-      console.error('Failed to send email in background job:', emailResult.details);
-      return NextResponse.json(
-        { success: false, error: 'Failed to send email' },
-        { status: 500 }
-      );
+    const formData = new FormData();
+    formData.append('to', data.to);
+    formData.append('from', data.from);
+    formData.append('subject', data.subject);
+    formData.append('text', data.text);
+    formData.append('html', data.html);
+    
+    if (data.attachments) {
+      data.attachments.forEach((attachment, index) => {
+        formData.append(`attachment${index}`, attachment.content);
+        formData.append(`attachment${index}_filename`, attachment.filename);
+        formData.append(`attachment${index}_type`, attachment.type);
+      });
     }
 
-    // Send confirmation email
-    const confirmationResult = await sendConfirmationEmail({
-      userName: data.userName,
-      userEmail: data.userEmail,
-      reportName: data.reportName,
-      fileName: data.fileName,
-      submissionDateTime: new Date().toLocaleString()
+    const response = await fetch('https://api.smtp2go.com/v3/email/send', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.SMTP2GO_API_KEY}`,
+      },
+      body: formData,
     });
 
-    if (!confirmationResult.success) {
-      console.error('Failed to send confirmation email:', confirmationResult.details);
-      // Don't fail the whole request if confirmation email fails
+    console.log('SMTP2GO response status:', response.status);
+    const responseData = await response.json();
+    console.log('SMTP2GO response:', responseData);
+
+    if (!response.ok) {
+      throw new Error(responseData.message || 'Failed to send email');
     }
 
-    return NextResponse.json(
-      { success: true, message: 'Emails sent successfully' },
-      { status: 200 }
-    );
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error in background email job:', {
-      error: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined
-    });
+    console.error('Error sending email:', error);
     return NextResponse.json(
-      { success: false, error: 'An error occurred while sending emails' },
+      { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      },
       { status: 500 }
     );
   }
