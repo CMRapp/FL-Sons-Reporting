@@ -1,15 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { sendEmail, sendConfirmationEmail } from '@/app/services/emailService';
 
 // Maximum file size (10MB)
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 // Allowed file types
-const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'application/pdf'];
-const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'pdf'];
-
-// Valid report IDs
-const VALID_REPORT_IDS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
+const ALLOWED_TYPES = ['.xlsx', '.xls', '.docx', '.doc', '.pdf'];
 
 export const runtime = 'edge';
 
@@ -20,102 +16,117 @@ export async function POST(
   try {
     console.log('Received upload request for report ID:', params.id);
     
-    const data = await request.json();
+    const formData = await request.formData();
+    const file = formData.get('file') as File;
+    const userName = formData.get('userName') as string;
+    const userEmail = formData.get('userEmail') as string;
+    const userTitle = formData.get('userTitle') as string;
+    const squadronNumber = formData.get('squadronNumber') as string;
+    const districtNumber = formData.get('districtNumber') as string;
+
     console.log('Received data:', {
-      reportName: data.reportName,
-      fileName: data.fileName,
-      userEmail: data.userEmail,
-      hasFileBuffer: !!data.fileBuffer,
-      fileType: data.fileType
+      reportId: params.id,
+      fileName: file?.name,
+      userEmail,
+      hasFile: !!file,
+      fileType: file?.type
     });
 
     // Validate required fields
-    if (!data.userName || !data.userEmail || !data.userTitle || 
-        !data.squadronNumber || !data.districtNumber || !data.fileBuffer) {
+    if (!userName || !userEmail || !userTitle || !squadronNumber || !districtNumber || !file) {
       console.error('Missing required fields:', {
-        userName: !!data.userName,
-        userEmail: !!data.userEmail,
-        userTitle: !!data.userTitle,
-        squadronNumber: !!data.squadronNumber,
-        districtNumber: !!data.districtNumber,
-        fileBuffer: !!data.fileBuffer
+        userName: !!userName,
+        userEmail: !!userEmail,
+        userTitle: !!userTitle,
+        squadronNumber: !!squadronNumber,
+        districtNumber: !!districtNumber,
+        file: !!file
       });
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { success: false, error: 'Missing required fields' },
         { status: 400 }
       );
     }
 
     // Validate file type
-    const allowedTypes = ['.xlsx', '.xls', '.docx', '.doc', '.pdf'];
-    const fileExtension = data.fileName.split('.').pop()?.toLowerCase();
-    if (!fileExtension || !allowedTypes.includes(`.${fileExtension}`)) {
+    const fileExtension = file.name.split('.').pop()?.toLowerCase();
+    if (!fileExtension || !ALLOWED_TYPES.includes(`.${fileExtension}`)) {
       console.error('Invalid file type:', fileExtension);
       return NextResponse.json(
-        { error: 'Invalid file type. Allowed types: .xlsx, .xls, .docx, .doc, .pdf' },
+        { success: false, error: 'Invalid file type. Allowed types: .xlsx, .xls, .docx, .doc, .pdf' },
         { status: 400 }
       );
     }
 
     // Validate file size (10MB limit)
-    const fileSize = (data.fileBuffer.length * 3) / 4; // Approximate size in bytes
-    if (fileSize > 10 * 1024 * 1024) {
-      console.error('File too large:', fileSize);
+    if (file.size > MAX_FILE_SIZE) {
+      console.error('File too large:', file.size);
       return NextResponse.json(
-        { error: 'File size exceeds 10MB limit' },
+        { success: false, error: 'File size exceeds 10MB limit' },
         { status: 400 }
       );
     }
 
-    console.log('Sending email...');
-    const emailResult = await sendEmail({
-      userName: data.userName,
-      userEmail: data.userEmail,
-      userTitle: data.userTitle,
-      squadronNumber: data.squadronNumber,
-      districtNumber: data.districtNumber,
-      reportName: data.reportName,
-      fileName: data.fileName,
-      reportId: params.id,
-      fileBuffer: data.fileBuffer,
-      fileType: data.fileType
-    });
+    // Get the report name based on the ID
+    const reportName = params.id === '1' ? 'NCSR' :
+                      params.id === '2' ? 'DCSR' :
+                      params.id === '3' ? 'VA&R' :
+                      params.id === '4' ? 'VAVS-VOY' :
+                      params.id === '5' ? 'AMERICANISM' :
+                      params.id === '6' ? 'C&Y' :
+                      params.id === '7' ? 'SIR' :
+                      params.id === '8' ? 'SDR' :
+                      params.id === '9' ? 'SOC' :
+                      'DOR';
 
+    // Read the file as base64
+    const arrayBuffer = await file.arrayBuffer();
+    const base64File = Buffer.from(arrayBuffer).toString('base64');
+
+    // Prepare email data
+    const emailData = {
+      userName,
+      userEmail,
+      userTitle,
+      squadronNumber,
+      districtNumber,
+      reportName,
+      fileName: file.name,
+      reportId: params.id,
+      fileBuffer: base64File,
+      fileType: file.type
+    };
+
+    console.log('Sending email...');
+    const emailResult = await sendEmail(emailData);
     if (!emailResult.success) {
       console.error('Failed to send email:', emailResult.details);
       return NextResponse.json(
-        { error: emailResult.details || 'Failed to send email' },
+        { success: false, error: 'Failed to send email' },
         { status: 500 }
       );
     }
 
+    // Send confirmation email
     console.log('Sending confirmation email...');
     const confirmationResult = await sendConfirmationEmail({
-      userName: data.userName,
-      userEmail: data.userEmail,
-      reportName: data.reportName,
-      fileName: data.fileName,
+      userName,
+      userEmail,
+      reportName,
+      fileName: file.name,
       submissionDateTime: new Date().toLocaleString()
     });
 
     if (!confirmationResult.success) {
       console.error('Failed to send confirmation email:', confirmationResult.details);
-      // Don't fail the whole request if confirmation email fails
-      console.log('Continuing despite confirmation email failure');
+      // Don't fail the request if confirmation email fails
     }
 
-    console.log('Upload and email process completed successfully');
-    return NextResponse.json({ message: 'File uploaded and email sent successfully' });
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error in upload handler:', error);
-    if (error instanceof Error) {
-      console.error('Error details:', {
-        message: error.message,
-        stack: error.stack
-      });
-    }
+    console.error('Upload error:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { success: false, error: error instanceof Error ? error.message : 'Internal server error' },
       { status: 500 }
     );
   }
