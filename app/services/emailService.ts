@@ -1,14 +1,14 @@
 interface EmailData {
-  userName: string;
-  userEmail: string;
-  userTitle: string;
-  squadronNumber: string;
-  districtNumber: string;
-  reportName: string;
-  fileName: string;
-  reportId: string;
-  fileBuffer: string;
-  fileType: string;
+  to: string;
+  from: string;
+  subject: string;
+  text: string;
+  html: string;
+  attachments?: {
+    filename: string;
+    content: ArrayBuffer;
+    contentType: string;
+  }[];
 }
 
 interface ConfirmationEmailData {
@@ -111,84 +111,41 @@ async function sendEmailToSMTP(data: {
 export async function sendEmail(data: EmailData) {
   try {
     if (!process.env.SMTP2GO_API_KEY) {
-      console.error('SMTP2GO API key not configured');
-      return { success: false, details: 'Email service not configured properly' };
+      throw new Error('SMTP2GO_API_KEY is not configured');
     }
 
-    // Get the appropriate recipient email based on report type
-    let recipientEmail = process.env.EMAIL_1; // Default to NCSR
-    if (data.reportId === '2') {
-      recipientEmail = process.env.EMAIL_2; // DCSR
-    } else if (data.reportId === '3') {
-      recipientEmail = process.env.EMAIL_3; // VA&R
-    } else if (data.reportId === '4') {
-      recipientEmail = process.env.EMAIL_4; // VAVS-VOY
-    } else if (data.reportId === '5') {
-      recipientEmail = process.env.EMAIL_5; // AMERICANISM
-    } else if (data.reportId === '6') {
-      recipientEmail = process.env.EMAIL_6; // C&Y
-    } else if (data.reportId === '7') {
-      recipientEmail = process.env.EMAIL_7; // SIR
-    } else if (data.reportId === '8') {
-      recipientEmail = process.env.EMAIL_8; // SDR
-    } else if (data.reportId === '9') {
-      recipientEmail = process.env.EMAIL_9; // SOC
-    } else if (data.reportId === '10') {
-      recipientEmail = process.env.EMAIL_10; // DOR
-    }
-
-    if (!recipientEmail) {
-      console.error('No recipient email address configured for report type:', data.reportId);
-      return { success: false, details: 'No recipient email address configured for this report type' };
-    }
-
-    console.log('Preparing email with data:', {
-      to: recipientEmail,
-      reportName: data.reportName,
-      fileName: data.fileName,
-      fileSize: data.fileBuffer.length
+    const response = await fetch('https://api.smtp2go.com/v3/email/send', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.SMTP2GO_API_KEY}`,
+      },
+      body: JSON.stringify({
+        api_key: process.env.SMTP2GO_API_KEY,
+        to: [data.to],
+        sender: data.from,
+        subject: data.subject,
+        text_body: data.text,
+        html_body: data.html,
+        attachments: data.attachments?.map(attachment => ({
+          filename: attachment.filename,
+          fileblob: Buffer.from(attachment.content).toString('base64'),
+          mimetype: attachment.contentType
+        }))
+      }),
     });
 
-    const emailData = {
-      to: recipientEmail,
-      from: process.env.SMTP_FROM_EMAIL || 'noreply@floridasons.org',
-      subject: `New ${data.reportName} Report Submission`,
-      text: `
-New Report Submission
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.data?.error || 'Failed to send email');
+    }
 
-Report Type: ${data.reportName}
-Submitted By: ${data.userName} (${data.userTitle})
-Squadron: ${data.squadronNumber}
-District: ${data.districtNumber}
-Email: ${data.userEmail}
-
-File: ${data.fileName}
-      `,
-      html: `
-        <h2>New Report Submission</h2>
-        <p><strong>Report Type:</strong> ${data.reportName}</p>
-        <p><strong>Submitted By:</strong> ${data.userName} (${data.userTitle})</p>
-        <p><strong>Squadron:</strong> ${data.squadronNumber}</p>
-        <p><strong>District:</strong> ${data.districtNumber}</p>
-        <p><strong>Email:</strong> ${data.userEmail}</p>
-        <p><strong>File:</strong> ${data.fileName}</p>
-      `,
-      attachments: [{
-        content: data.fileBuffer,
-        filename: data.fileName,
-        type: data.fileType
-      }]
-    };
-
-    console.log('Sending email to:', recipientEmail);
-    await sendEmailToSMTP(emailData);
-    console.log('Email sent successfully');
     return { success: true };
   } catch (error) {
-    console.error('Error sending email:', error);
+    console.error('Email sending error:', error);
     return { 
       success: false, 
-      details: error instanceof Error ? error.message : 'Unknown error occurred while sending email'
+      error: error instanceof Error ? error.message : 'Failed to send email' 
     };
   }
 }

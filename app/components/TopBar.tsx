@@ -1,64 +1,64 @@
 'use client';
 
-import React from 'react';
-import Image from 'next/image';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
 
-const TopBar = () => {
-  const [currentTime, setCurrentTime] = useState<string>('');
+export default function TopBar() {
+  const pathname = usePathname();
+  const isHome = pathname === '/';
   const [currentDate, setCurrentDate] = useState<string>('');
+  const [currentTime, setCurrentTime] = useState<string>('');
 
   useEffect(() => {
     const updateDateTime = () => {
       const now = new Date();
       
-      // Format time in 12-hour format
-      const timeString = now.toLocaleTimeString('en-US', {
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true
-      });
+      // Format time as H:MM AM/PM
+      let hours = now.getHours();
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12;
+      hours = hours ? hours : 12; // Convert 0 to 12
+      const minutes = now.getMinutes().toString().padStart(2, '0');
+      setCurrentTime(`${hours}:${minutes} ${ampm}`);
       
-      // Format date as MM/DD/YYYY
-      const dateString = now.toLocaleDateString('en-US', {
-        month: '2-digit',
-        day: '2-digit',
-        year: 'numeric'
-      });
-
-      setCurrentTime(timeString);
-      setCurrentDate(dateString);
+      // Format date as MM/DD/YY
+      const month = (now.getMonth() + 1).toString().padStart(2, '0');
+      const day = now.getDate().toString().padStart(2, '0');
+      const year = now.getFullYear().toString().slice(-2);
+      setCurrentDate(`${month}/${day}/${year}`);
     };
 
-    // Update immediately
+    // Update time immediately and then every minute
     updateDateTime();
-
-    // Update every second
-    const interval = setInterval(updateDateTime, 1000);
+    const interval = setInterval(updateDateTime, 60000);
 
     // Cleanup interval on component unmount
     return () => clearInterval(interval);
   }, []);
 
   return (
-    <div className="bg-blue-800 shadow-md">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center py-4">
-          <div className="flex items-center">
-              <div className="ml-4">
-              <h2 className="uppercase  font-bold text-white font-jost">Sons of the American Legion<br/> Detachment of Florida</h2>
-              
-            </div>
-          </div>
-          <div className="flex items-center space-x-4">
-            <span className="text-sm text-white">{currentTime}</span>
-            <span className="text-sm text-white">{currentDate}</span>
-            <span className="text-sm text-white">v1.0.2</span>
-          </div>
+    <div className="bg-blue-900 text-white p-4">
+      <div className="container mx-auto flex justify-between items-center">
+        <div className="flex items-center space-x-4">
+          <Link href="/" className="uppercase text-xl font-jost font-bold hover:text-blue-200">
+            Detachment of Florida Reporting Portal
+          </Link>
+          <span className="text-sm text-blue-200">v1.0.2</span>
+        </div>
+        <div className="flex items-center space-x-4">
+          <span className="text-sm text-blue-200">{currentDate}</span> 
+          <span className="text-sm text-blue-200">{currentTime}</span>
+          {!isHome && (
+            <Link 
+              href="/" 
+              className="bg-blue-800 hover:bg-blue-700 text-white px-4 py-2 rounded transition-colors"
+            >
+              Back to Home
+            </Link>
+          )}
         </div>
       </div>
     </div>
   );
-};
-
-export default TopBar; 
+} 
