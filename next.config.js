@@ -9,6 +9,7 @@ const nextConfig = {
         pathname: '/**',
       },
     ],
+    domains: ['floridasons.org'],
   },
   env: {
     SMTP_HOST: process.env.SMTP_HOST,
@@ -28,7 +29,16 @@ const nextConfig = {
     EMAIL_USER: process.env.EMAIL_USER,
     EMAIL_PASSWORD: process.env.EMAIL_PASSWORD,
     ADMIN_EMAIL: process.env.ADMIN_EMAIL,
-  }
+  },
+  webpack: (config) => {
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      fs: false,
+      net: false,
+      tls: false,
+    };
+    return config;
+  },
 };
 
 module.exports = nextConfig; 

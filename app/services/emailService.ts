@@ -4,11 +4,11 @@ interface EmailData {
   subject: string;
   text: string;
   html: string;
-  attachments?: {
+  attachments?: Array<{
     filename: string;
     content: ArrayBuffer;
     contentType: string;
-  }[];
+  }>;
 }
 
 interface ConfirmationEmailData {
@@ -17,6 +17,11 @@ interface ConfirmationEmailData {
   reportName: string;
   fileName: string;
   submissionDateTime: string;
+}
+
+interface EmailResponse {
+  success: boolean;
+  error?: string;
 }
 
 async function sendEmailToSMTP(data: {
@@ -108,36 +113,40 @@ async function sendEmailToSMTP(data: {
   }
 }
 
-export async function sendEmail(data: EmailData) {
+export async function sendEmail(data: EmailData): Promise<EmailResponse> {
   try {
     if (!process.env.SMTP2GO_API_KEY) {
-      throw new Error('SMTP2GO_API_KEY is not configured');
+      console.error('SMTP2GO_API_KEY is not configured');
+      return { success: false, error: 'Email service not configured' };
     }
 
     const response = await fetch('https://api.smtp2go.com/v3/email/send', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.SMTP2GO_API_KEY}`,
       },
       body: JSON.stringify({
         api_key: process.env.SMTP2GO_API_KEY,
-        to: [data.to],
         sender: data.from,
+        to: [data.to],
         subject: data.subject,
         text_body: data.text,
         html_body: data.html,
         attachments: data.attachments?.map(attachment => ({
           filename: attachment.filename,
-          fileblob: Buffer.from(attachment.content).toString('base64'),
-          mimetype: attachment.contentType
+          content: Buffer.from(attachment.content).toString('base64'),
+          type: attachment.contentType
         }))
-      }),
+      })
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.data?.error || 'Failed to send email');
+      console.error('SMTP2GO API error:', errorData);
+      return { 
+        success: false, 
+        error: errorData.data?.error || 'Failed to send email' 
+      };
     }
 
     return { success: true };
@@ -145,7 +154,7 @@ export async function sendEmail(data: EmailData) {
     console.error('Email sending error:', error);
     return { 
       success: false, 
-      error: error instanceof Error ? error.message : 'Failed to send email' 
+      error: error instanceof Error ? error.message : 'Unknown error' 
     };
   }
 }
