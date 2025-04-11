@@ -26,17 +26,20 @@ function formatDate(date: Date): string {
   return `${month}${day}${year}`;
 }
 
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+): Promise<NextResponse> {
   try {
     const formData = await request.formData();
-    const file = formData.get('file') as File;
     const userName = formData.get('userName') as string;
     const userEmail = formData.get('userEmail') as string;
     const userTitle = formData.get('userTitle') as string;
     const squadronNumber = formData.get('squadronNumber') as string;
     const districtNumber = formData.get('districtNumber') as string;
+    const file = formData.get('file') as File;
 
-    if (!file || !userName || !userEmail || !userTitle || !squadronNumber || !districtNumber) {
+    if (!userName || !userEmail || !userTitle || !squadronNumber || !districtNumber || !file) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
