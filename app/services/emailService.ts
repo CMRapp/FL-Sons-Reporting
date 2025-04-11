@@ -120,24 +120,35 @@ export async function sendEmail(data: EmailData): Promise<EmailResponse> {
       return { success: false, error: 'Email service not configured' };
     }
 
+    const requestData = {
+      api_key: process.env.SMTP2GO_API_KEY,
+      sender: data.from,
+      to: [data.to],
+      subject: data.subject,
+      text_body: data.text,
+      html_body: data.html,
+      attachments: data.attachments?.map(attachment => ({
+        filename: attachment.filename,
+        fileblob: Buffer.from(attachment.content).toString('base64'),
+        mimetype: attachment.contentType
+      }))
+    };
+
+    console.log('Sending email with data:', {
+      ...requestData,
+      api_key: '[REDACTED]',
+      attachments: requestData.attachments?.map(a => ({
+        ...a,
+        fileblob: '[REDACTED]'
+      }))
+    });
+
     const response = await fetch('https://api.smtp2go.com/v3/email/send', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        api_key: process.env.SMTP2GO_API_KEY,
-        sender: data.from,
-        to: [data.to],
-        subject: data.subject,
-        text_body: data.text,
-        html_body: data.html,
-        attachments: data.attachments?.map(attachment => ({
-          filename: attachment.filename,
-          content: Buffer.from(attachment.content).toString('base64'),
-          type: attachment.contentType
-        }))
-      })
+      body: JSON.stringify(requestData)
     });
 
     if (!response.ok) {
@@ -148,6 +159,9 @@ export async function sendEmail(data: EmailData): Promise<EmailResponse> {
         error: errorData.data?.error || 'Failed to send email' 
       };
     }
+
+    const responseData = await response.json();
+    console.log('Email sent successfully:', responseData);
 
     return { success: true };
   } catch (error) {
