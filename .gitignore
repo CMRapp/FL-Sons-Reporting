@@ -40,3 +40,6 @@ next-env.d.ts
 .idea/
 
 /app/generated/prisma
+
+# Separate projects
+/slideshow/
