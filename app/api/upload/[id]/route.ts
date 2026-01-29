@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sendEmail } from '@/app/services/emailService';
+import { getReportEmail } from '@/app/utils/reportConfig';
 
 // Helper function to get report name from ID
 function getReportName(id: string): string {
@@ -26,7 +27,7 @@ function formatDate(date: Date): string {
   return `${month}${day}${year}`;
 }
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function POST(
@@ -74,7 +75,7 @@ export async function POST(
     const fileBuffer = await file.arrayBuffer();
 
     // Prepare email data
-    const recipientEmail = process.env[`EMAIL_${params.id}`];
+    const recipientEmail = await getReportEmail(params.id);
     if (!recipientEmail) {
       return NextResponse.json(
         { error: 'No recipient email configured for this report type' },

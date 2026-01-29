@@ -5,6 +5,32 @@ All notable changes to the FL SAL Reporting Portal will be documented in this fi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.4] - 2026-01-14
+
+### Added
+- **Admin Panel** - New web-based interface for managing report email addresses (`/admin`)
+  - Secure password-protected access
+  - Update email addresses without editing environment variables
+  - Audit trail tracking (who made changes and when)
+  - Real-time configuration updates
+- **Automatic Service Year Calculation** - Service year now updates automatically on July 1st each year
+  - Service year runs from July 1 to June 30
+  - Dynamic display eliminates manual updates
+- Configuration management system with JSON-based storage
+- Migration script to populate config from existing environment variables
+- Comprehensive admin setup documentation (ADMIN_SETUP.md)
+
+### Changed
+- Upload API route now reads email configuration from config file (with fallback to environment variables)
+- Changed upload runtime from 'edge' to 'nodejs' to support file system operations
+- Service year display is now dynamically calculated based on current date
+
+### Technical Improvements
+- New utility functions: `getServiceYear()`, `getReportEmail()`, `getReportConfig()`
+- API endpoints: `/api/admin/config` (GET/POST) for configuration management
+- Enhanced security with Bearer token authentication for admin operations
+- Backward compatibility maintained with environment variable fallback
+
 ## [1.0.3] - 2026-01-14
 
 ### Changed
@@ -97,6 +123,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added validation for email recipients
 - Secured file upload process with type and size restrictions
 
+[1.0.4]: https://github.com/yourusername/reporting/compare/v1.0.3...v1.0.4
 [1.0.3]: https://github.com/yourusername/reporting/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/yourusername/reporting/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/yourusername/reporting/compare/v1.0.0...v1.0.1

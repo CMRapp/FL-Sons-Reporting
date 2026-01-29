@@ -1,0 +1,56 @@
+{
+  "reportEmails": {
+    "1": {
+      "reportName": "NCSR",
+      "fullName": "National Consolidated Squadron Report",
+      "email": "reports@floridasons.org"
+    },
+    "2": {
+      "reportName": "DCSR",
+      "fullName": "Detachment Consolidated Squadron Report",
+      "email": "csr@floridasons.org"
+    },
+    "3": {
+      "reportName": "VA&R",
+      "fullName": "Veterans Affairs & Rehabilitation",
+      "email": "var@floridasons.org"
+    },
+    "4": {
+      "reportName": "VAVS-VOY",
+      "fullName": "VAVS Volunteer of the Year",
+      "email": "var@floridasons.org"
+    },
+    "5": {
+      "reportName": "AMERICANISM",
+      "fullName": "Americanism",
+      "email": "amer.reports@floridasons.org"
+    },
+    "6": {
+      "reportName": "C&Y",
+      "fullName": "Children & Youth",
+      "email": "cy.reports@floridasons.org"
+    },
+    "7": {
+      "reportName": "SIR",
+      "fullName": "Squadron Information Report",
+      "email": "reports@floridasons.org"
+    },
+    "8": {
+      "reportName": "SDR",
+      "fullName": "Annual Squadron Data Report",
+      "email": "sdr@floridasons.org"
+    },
+    "9": {
+      "reportName": "SOC",
+      "fullName": "Squadron Officer Change",
+      "email": "reports@floridasons.org"
+    },
+    "10": {
+      "reportName": "DOR",
+      "fullName": "District Officers Report",
+      "email": "reports@floridasons.org"
+    }
+  },
+  "lastUpdated": "2026-01-29T16:17:04.694Z",
+  "updatedBy": "Migration Script"
+}
