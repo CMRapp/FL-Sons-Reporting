@@ -5,6 +5,42 @@ All notable changes to the FL SAL Reporting Portal will be documented in this fi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-01-14
+
+### Added
+- **Admin Panel Link** in header navigation for easy access
+  - Prominent yellow "Admin" button visible on all pages
+  - Automatically hidden when on admin page
+- **Password Visibility Toggle** on admin login
+  - Eye icon to show/hide password while typing
+  - Improved UX for password entry
+- **Browser Password Manager Support**
+  - Added autocomplete and name attributes
+  - Enables password saving and autofill
+- **Security Disclaimer Modal** on page load
+  - Mandatory acknowledgment of file format requirements
+  - Clear explanation of accepted and rejected formats
+  - Guidance for converting Office files to PDF
+
+### Changed - BREAKING
+- **File Naming Format** simplified
+  - Old: `SQ[squadron]-[reportName]-Report-[MMDDYYYY].[ext]`
+  - New: `SQ[squadron]-[reportName].[ext]`
+  - Example: `SQ323-SIR.pdf` instead of `SQ323-SIR-Report-01142026.pdf`
+- **Report Name Abbreviations** updated
+  - VA&R → VAR
+  - VAVS-VOY → VAVS-Vol-Yr
+  - C&Y → CY
+- **File Type Restrictions** for security
+  - ✅ Allowed: PDF and image files only (.pdf, .jpg, .jpeg, .png, .gif, .webp, .bmp, .svg)
+  - ❌ Removed: Excel (.xlsx, .xls) and Word (.docx, .doc) support
+  - Prevents potential security vulnerabilities from Office documents
+
+### Security
+- Enhanced file upload security by restricting to safe file formats
+- Eliminated risk from executable macros in Office documents
+- Reduced attack surface for malicious file uploads
+
 ## [1.0.5] - 2026-01-14
 
 ### Added
@@ -155,6 +191,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added validation for email recipients
 - Secured file upload process with type and size restrictions
 
+[1.1.0]: https://github.com/yourusername/reporting/compare/v1.0.5...v1.1.0
 [1.0.5]: https://github.com/yourusername/reporting/compare/v1.0.4...v1.0.5
 [1.0.4]: https://github.com/yourusername/reporting/compare/v1.0.3...v1.0.4
 [1.0.3]: https://github.com/yourusername/reporting/compare/v1.0.2...v1.0.3
