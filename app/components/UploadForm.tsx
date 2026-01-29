@@ -163,9 +163,6 @@ const UploadForm = () => {
     });
 
     try {
-      console.log('Starting file upload process...');
-      console.log('Selected file:', files[index]?.name, 'Size:', files[index]?.size);
-      
       // Only set uploading status for the current index
       setUploadStatus(prev => {
         const newStatus = [...prev];
@@ -255,8 +252,8 @@ const UploadForm = () => {
           />
         </div>
 
-        <h1 className="text-3xl font-bold mb-8 text-center text-blue-800 uppercase">* 2024-2025 Report Submission Portal *</h1>
-        <p className="text-center text-black text-xl">Please fill out the form below to submit your reports for the 2024-2025 service year.</p>
+        <h1 className="text-3xl font-bold mb-8 text-center text-blue-800 uppercase">* 2025-2026 Report Submission Portal *</h1>
+        <p className="text-center text-black text-xl">Please fill out the form below to submit your reports for the 2025-2026 service year.</p>
         <p className="text-center text-black text-xl italic font-bold  mb-8">Send any issues or questions to <a href="mailto:adjutant@floridasons.org" className="text-blue-500">adjutant@floridasons.org</a></p>
         {/* User Information Form */}
         <div className="bg-white shadow-md rounded-lg p-6 mb-8">
@@ -328,26 +325,15 @@ const UploadForm = () => {
                 name="districtNumber"
                 value={formData.districtNumber}
                 onChange={handleInputChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-black placeholder:text-gray-400"
                 required
+                aria-required="true"
+                aria-label="District number"
               >
-                <option value="">Select District</option>
-                <option value="1">1st District</option>
-                <option value="2">2nd District</option>
-                <option value="3">3rd District</option>
-                <option value="4">4th District</option>
-                <option value="5">5th District</option>
-                <option value="6">6th District</option>
-                <option value="7">7th District</option>
-                <option value="8">8th District</option>
-                <option value="9">9th District</option>
-                <option value="11">11th District</option>
-                <option value="12">12th District</option>
-                <option value="13">13th District</option>
-                <option value="14">14th District</option>
-                <option value="15">15th District</option>
-                <option value="16">16th District</option>
-                <option value="17">17th District</option>
+                <option value="">Select a district</option>
+                {districtNumbers.map(num => (
+                  <option key={num} value={num}>District {num}</option>
+                ))}
               </select>
             </div>
           </div>

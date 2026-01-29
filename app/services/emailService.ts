@@ -154,7 +154,7 @@ export async function sendEmail(data: EmailData): Promise<EmailResponse> {
     if (!response.ok) {
       const errorData = await response.json();
       console.error('SMTP2GO API error:', errorData);
-      return { 
+    return {
         success: false, 
         error: errorData.data?.error || 'Failed to send email' 
       };
@@ -166,8 +166,8 @@ export async function sendEmail(data: EmailData): Promise<EmailResponse> {
     return { success: true };
   } catch (error) {
     console.error('Email sending error:', error);
-    return { 
-      success: false, 
+    return {
+      success: false,
       error: error instanceof Error ? error.message : 'Unknown error' 
     };
   }

@@ -5,6 +5,28 @@ All notable changes to the FL SAL Reporting Portal will be documented in this fi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.3] - 2026-01-14
+
+### Changed
+- Updated Next.js from 14.2.28 to 14.2.35 (security patches)
+- Updated @next/eslint-plugin-next from 14.2.28 to 14.2.35
+- Updated eslint-config-next from 14.2.28 to 14.2.35
+- Updated TypeScript from 5.8.3 to 5.9.3
+- Updated autoprefixer from 10.4.21 to 10.4.23
+- Updated postcss from 8.5.3 to 8.5.6
+- Updated @tailwindcss/forms from 0.5.10 to 0.5.11
+- Updated nodemailer from 6.10.0 to 6.10.1
+- Moved favicon from public/ to app/ directory (Next.js 14 convention)
+
+### Removed
+- Removed favicon-generator and favicons packages (154 dependencies removed)
+- Manual favicon implementation replaces automated generation
+
+### Security
+- Fixed 5 high-severity Next.js vulnerabilities (SSRF, cache confusion, content injection, information exposure, DoS)
+- Resolved multiple moderate-severity vulnerabilities in dependencies
+- Reduced total vulnerabilities from 21 to 11
+
 ## [1.0.2] - 2024-03-19
 
 ### Changed
@@ -75,6 +97,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added validation for email recipients
 - Secured file upload process with type and size restrictions
 
+[1.0.3]: https://github.com/yourusername/reporting/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/yourusername/reporting/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/yourusername/reporting/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/yourusername/reporting/releases/tag/v1.0.0 
