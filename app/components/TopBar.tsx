@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation';
 export default function TopBar() {
   const pathname = usePathname();
   const isHome = pathname === '/';
+  const isAdmin = pathname === '/admin';
   const [currentDate, setCurrentDate] = useState<string>('');
   const [currentTime, setCurrentTime] = useState<string>('');
 
@@ -49,6 +50,15 @@ export default function TopBar() {
         <div className="flex items-center space-x-4">
           <span className="text-sm text-blue-200">{currentDate}</span> 
           <span className="text-sm text-blue-200">{currentTime}</span>
+          {!isAdmin && (
+            <Link 
+              href="/admin" 
+              className="bg-yellow-600 hover:bg-yellow-500 text-white px-4 py-2 rounded transition-colors text-sm font-semibold"
+              title="Admin Panel"
+            >
+              Admin
+            </Link>
+          )}
           {!isHome && (
             <Link 
               href="/" 
