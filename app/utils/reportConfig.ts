@@ -1,34 +1,19 @@
-import fs from 'fs/promises';
-import path from 'path';
-
-interface ReportEmail {
-  reportName: string;
-  fullName: string;
-  email: string;
-}
-
-interface ReportConfig {
-  reportEmails: { [key: string]: ReportEmail };
-  lastUpdated: string;
-  updatedBy: string;
-}
-
-const CONFIG_PATH = path.join(process.cwd(), 'app', 'config', 'reportEmails.json');
+import prisma from '@/app/lib/prisma';
 
 /**
- * Get the email address for a specific report type
- * Falls back to environment variable if config file is not available or email is not set
+ * Get the email address for a specific report type from database
+ * Falls back to environment variable if database is not available or email is not set
  * 
  * @param reportId - The report ID (1-10)
  * @returns The email address for the report, or null if not found
  */
 export async function getReportEmail(reportId: string): Promise<string | null> {
   try {
-    // Try to read from config file
-    const configData = await fs.readFile(CONFIG_PATH, 'utf-8');
-    const config: ReportConfig = JSON.parse(configData);
+    // Try to read from database
+    const reportConfig = await prisma.reportEmail.findUnique({
+      where: { reportId },
+    });
     
-    const reportConfig = config.reportEmails[reportId];
     if (reportConfig && reportConfig.email) {
       return reportConfig.email;
     }
@@ -36,30 +21,36 @@ export async function getReportEmail(reportId: string): Promise<string | null> {
     // Fallback to environment variable
     const envEmail = process.env[`EMAIL_${reportId}`];
     if (envEmail) {
-      return envEmail;
+      // Clean email (remove comments)
+      return envEmail.split('#')[0].trim();
     }
     
     return null;
   } catch (error) {
-    console.error('Error reading report email config:', error);
+    console.error('Error reading report email from database:', error);
     
     // Fallback to environment variable on error
     const envEmail = process.env[`EMAIL_${reportId}`];
-    return envEmail || null;
+    if (envEmail) {
+      return envEmail.split('#')[0].trim();
+    }
+    return null;
   }
 }
 
 /**
- * Get all report email configurations
+ * Get all report email configurations from database
  * 
- * @returns The complete configuration object
+ * @returns Array of report configurations
  */
-export async function getReportConfig(): Promise<ReportConfig | null> {
+export async function getAllReportEmails() {
   try {
-    const configData = await fs.readFile(CONFIG_PATH, 'utf-8');
-    return JSON.parse(configData);
+    const reports = await prisma.reportEmail.findMany({
+      orderBy: { reportId: 'asc' },
+    });
+    return reports;
   } catch (error) {
-    console.error('Error reading report config:', error);
-    return null;
+    console.error('Error reading report emails from database:', error);
+    return [];
   }
 }

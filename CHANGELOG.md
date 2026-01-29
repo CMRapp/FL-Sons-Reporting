@@ -5,6 +5,38 @@ All notable changes to the FL SAL Reporting Portal will be documented in this fi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.5] - 2026-01-14
+
+### Added
+- **PostgreSQL Database Integration** - Migrated from JSON file storage to PostgreSQL database (Neon)
+  - Prisma ORM integration for type-safe database operations
+  - Database schema with ReportEmail, ConfigMetadata, and AuditLog models
+  - Automated migration script to populate database from existing configuration
+  - Enhanced audit logging with IP address tracking and change history
+- Database-backed admin configuration with full CRUD operations
+- Prisma Client singleton for optimized database connections
+
+### Changed
+- Admin panel now reads/writes from PostgreSQL database instead of JSON files
+- Report email configuration stored in database with automatic fallback to environment variables
+- Upload route retrieves email addresses from database (maintains env var fallback)
+- Improved audit trail with detailed change tracking in database
+
+### Technical Improvements
+- Installed Prisma 5.22.0 (@prisma/client and prisma packages)
+- Created database schema with proper indexes and relationships
+- Implemented database connection pooling for optimal performance
+- Added TypeScript support for database migration scripts (tsx)
+- Updated `reportConfig.ts` utility to use Prisma instead of file system
+- Enhanced error handling with database-level fallbacks
+
+### Database Schema
+```sql
+- report_emails: Stores email configuration for each report type
+- config_metadata: Stores system configuration metadata
+- audit_logs: Tracks all configuration changes with timestamps and user info
+```
+
 ## [1.0.4] - 2026-01-14
 
 ### Added
@@ -123,6 +155,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added validation for email recipients
 - Secured file upload process with type and size restrictions
 
+[1.0.5]: https://github.com/yourusername/reporting/compare/v1.0.4...v1.0.5
 [1.0.4]: https://github.com/yourusername/reporting/compare/v1.0.3...v1.0.4
 [1.0.3]: https://github.com/yourusername/reporting/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/yourusername/reporting/compare/v1.0.1...v1.0.2

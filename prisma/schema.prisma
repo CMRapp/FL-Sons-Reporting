@@ -1,0 +1,53 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Report email configuration
+model ReportEmail {
+  id          String   @id @default(cuid())
+  reportId    String   @unique // 1-10
+  reportName  String   // NCSR, DCSR, etc.
+  fullName    String   // Full report name
+  email       String   // Email address for this report
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([reportId])
+  @@map("report_emails")
+}
+
+// Configuration metadata
+model ConfigMetadata {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  updatedBy   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("config_metadata")
+}
+
+// Audit log for configuration changes
+model AuditLog {
+  id          String   @id @default(cuid())
+  action      String   // 'update', 'create', 'delete'
+  entity      String   // 'report_email', 'config'
+  entityId    String?
+  changes     String   // JSON string of changes
+  performedBy String
+  ipAddress   String?
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([entity, entityId])
+  @@map("audit_logs")
+}

@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import fs from 'fs/promises';
-import path from 'path';
+import prisma from '@/app/lib/prisma';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-
-const CONFIG_PATH = path.join(process.cwd(), 'app', 'config', 'reportEmails.json');
 
 // Helper function to verify admin credentials
 function verifyAdminAuth(request: NextRequest): boolean {
@@ -25,7 +22,7 @@ function verifyAdminAuth(request: NextRequest): boolean {
   return token === adminPassword;
 }
 
-// GET - Retrieve current configuration
+// GET - Retrieve current configuration from database
 export async function GET(request: NextRequest) {
   try {
     // Check if admin is authenticated
@@ -36,12 +33,31 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const configData = await fs.readFile(CONFIG_PATH, 'utf-8');
-    const config = JSON.parse(configData);
+    const reportEmails = await prisma.reportEmail.findMany({
+      orderBy: { reportId: 'asc' },
+    });
+
+    const metadata = await prisma.configMetadata.findUnique({
+      where: { key: 'last_updated' },
+    });
+
+    // Transform to match expected format
+    const config = {
+      reportEmails: reportEmails.reduce((acc, report) => {
+        acc[report.reportId] = {
+          reportName: report.reportName,
+          fullName: report.fullName,
+          email: report.email,
+        };
+        return acc;
+      }, {} as Record<string, { reportName: string; fullName: string; email: string }>),
+      lastUpdated: metadata?.value || '',
+      updatedBy: metadata?.updatedBy || '',
+    };
     
     return NextResponse.json(config);
   } catch (error) {
-    console.error('Error reading config:', error);
+    console.error('Error reading config from database:', error);
     return NextResponse.json(
       { error: 'Failed to read configuration' },
       { status: 500 }
@@ -49,7 +65,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - Update configuration
+// POST - Update configuration in database
 export async function POST(request: NextRequest) {
   try {
     // Check if admin is authenticated
@@ -82,21 +98,76 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const timestamp = new Date().toISOString();
+    const changes: string[] = [];
+
+    // Update all report emails in database
+    for (const [reportId, reportData] of Object.entries(reportEmails)) {
+      const data = reportData as { reportName: string; fullName: string; email: string };
+      
+      const oldReport = await prisma.reportEmail.findUnique({
+        where: { reportId },
+      });
+
+      await prisma.reportEmail.upsert({
+        where: { reportId },
+        update: {
+          email: data.email,
+        },
+        create: {
+          reportId,
+          reportName: data.reportName,
+          fullName: data.fullName,
+          email: data.email,
+        },
+      });
+
+      if (oldReport && oldReport.email !== data.email) {
+        changes.push(`${data.reportName}: ${oldReport.email || '(empty)'} → ${data.email || '(empty)'}`);
+      }
+    }
+
+    // Update metadata
+    await prisma.configMetadata.upsert({
+      where: { key: 'last_updated' },
+      update: {
+        value: timestamp,
+        updatedBy: updatedBy || 'Admin',
+      },
+      create: {
+        key: 'last_updated',
+        value: timestamp,
+        updatedBy: updatedBy || 'Admin',
+      },
+    });
+
+    // Create audit log
+    if (changes.length > 0) {
+      await prisma.auditLog.create({
+        data: {
+          action: 'update',
+          entity: 'report_email',
+          changes: JSON.stringify(changes),
+          performedBy: updatedBy || 'Admin',
+          ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
+        },
+      });
+    }
+
     const updatedConfig = {
       reportEmails,
-      lastUpdated: new Date().toISOString(),
-      updatedBy: updatedBy || 'Admin'
+      lastUpdated: timestamp,
+      updatedBy: updatedBy || 'Admin',
     };
-
-    await fs.writeFile(CONFIG_PATH, JSON.stringify(updatedConfig, null, 2), 'utf-8');
 
     return NextResponse.json({ 
       success: true, 
       message: 'Configuration updated successfully',
-      config: updatedConfig
+      config: updatedConfig,
+      changes: changes.length,
     });
   } catch (error) {
-    console.error('Error updating config:', error);
+    console.error('Error updating config in database:', error);
     return NextResponse.json(
       { error: 'Failed to update configuration' },
       { status: 500 }
