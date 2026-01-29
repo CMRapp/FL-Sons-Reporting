@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { sendEmail } from '@/app/services/emailService';
 
 export const runtime = 'edge';
