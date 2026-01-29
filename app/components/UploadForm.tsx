@@ -283,7 +283,7 @@ const UploadForm = () => {
           </div>
           <p className="text-gray-700 text-sm">
             <strong>Note:</strong> If your report is in a Word or Excel format, please convert it to PDF before uploading.
-            Most office software has a "Save as PDF" or "Export to PDF" option.
+            Most office software has a &quot;Save as PDF&quot; or &quot;Export to PDF&quot; option.
           </p>
           <button
             onClick={() => setShowDisclaimer(false)}
