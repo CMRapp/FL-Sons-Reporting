@@ -32,6 +32,7 @@ const UploadForm = () => {
   const [modalMessage, setModalMessage] = useState('');
   const [currentReportName, setCurrentReportName] = useState('');
   const [focusedReport, setFocusedReport] = useState<string | null>(null);
+  const [showDisclaimer, setShowDisclaimer] = useState(true);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -50,11 +51,23 @@ const UploadForm = () => {
     if (file) {
       const fileType = file.type;
       const maxSize = 10 * 1024 * 1024; // 10MB
+      
+      // Allow PDF and image formats only for security
+      const allowedTypes = [
+        'application/pdf',
+        'image/jpeg',
+        'image/jpg', 
+        'image/png',
+        'image/gif',
+        'image/webp',
+        'image/bmp',
+        'image/svg+xml'
+      ];
 
-      if (fileType !== 'application/pdf' && fileType !== 'image/jpeg' && fileType !== 'image/png') {
+      if (!allowedTypes.includes(fileType)) {
         setUploadStatus(prev => {
           const newStatus = [...prev];
-          newStatus[index] = 'Error: Only PDF, JPEG, and PNG files are allowed';
+          newStatus[index] = 'Error: Only PDF and image files are allowed for security purposes';
           return newStatus;
         });
         return;
@@ -242,6 +255,45 @@ const UploadForm = () => {
 
   return (
     <div className="w-full min-h-screen bg-[url('/flag-body-bg.png')] bg-no-repeat bg-cover -mt-6">
+      {/* File Format Disclaimer Modal */}
+      <Modal
+        isOpen={showDisclaimer}
+        onClose={() => setShowDisclaimer(false)}
+        title="⚠️ Important: File Format Requirements"
+      >
+        <div className="space-y-4">
+          <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+            <p className="text-yellow-800 font-semibold mb-2">
+              For security purposes, only the following file formats are accepted:
+            </p>
+            <ul className="list-disc list-inside text-yellow-700 space-y-1 ml-4">
+              <li>PDF files (.pdf)</li>
+              <li>Image files (.jpg, .jpeg, .png, .gif, .webp, .bmp, .svg)</li>
+            </ul>
+          </div>
+          <div className="bg-red-50 border-l-4 border-red-400 p-4">
+            <p className="text-red-800 font-semibold mb-2">
+              ❌ NOT Accepted:
+            </p>
+            <ul className="list-disc list-inside text-red-700 space-y-1 ml-4">
+              <li>Microsoft Office files (.docx, .xlsx, .doc, .xls)</li>
+              <li>Executable files (.exe, .bat, .sh)</li>
+              <li>Archive files (.zip, .rar)</li>
+            </ul>
+          </div>
+          <p className="text-gray-700 text-sm">
+            <strong>Note:</strong> If your report is in a Word or Excel format, please convert it to PDF before uploading.
+            Most office software has a "Save as PDF" or "Export to PDF" option.
+          </p>
+          <button
+            onClick={() => setShowDisclaimer(false)}
+            className="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 transition-colors font-semibold"
+          >
+            I Understand - Continue to Upload
+          </button>
+        </div>
+      </Modal>
+      
       <div className="max-w-4xl lg:max-w-[1200px] mx-auto p-6">
         {/* Logo */}
         <div className="flex justify-center mb-8">
@@ -426,7 +478,7 @@ const UploadForm = () => {
                       <input
                         type="file"
                         onChange={(e) => handleFileChange(index, e)}
-                        accept=".pdf,.jpg,.jpeg,.png"
+                        accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.bmp,.svg"
                         className="flex-1 text-black placeholder:text-gray-200 file:text-blue-500"
                         aria-label={`Upload file for ${index === 0 ? 'National Consolidated Squadron Report' : 
                                    index === 1 ? 'Detachment Consolidated Squadron Report' : 
@@ -440,7 +492,7 @@ const UploadForm = () => {
                                    'District Officers Report'}`}
                       />
                     </div>
-                    <p className="text-sm text-gray-500 mt-1">Accepted file types: PDF, JPEG, PNG (Max size: 10MB)</p>
+                    <p className="text-sm text-gray-500 mt-1">Accepted file types: PDF and image files only (Max size: 10MB)</p>
                     <button
                       onClick={() => handleSubmit(index)}
                       disabled={uploadStatus[index] === 'Uploading...'}

@@ -7,24 +7,16 @@ function getReportName(id: string): string {
   const reportNames: { [key: string]: string } = {
     '1': 'NCSR',
     '2': 'DCSR',
-    '3': 'VA&R',
-    '4': 'VAVS-VOY',
+    '3': 'VAR',
+    '4': 'VAVS-Vol-Yr',
     '5': 'AMERICANISM',
-    '6': 'C&Y',
+    '6': 'CY',
     '7': 'SIR',
     '8': 'SDR',
     '9': 'SOC',
     '10': 'DOR'
   };
   return reportNames[id] || 'Unknown Report';
-}
-
-// Helper function to format date as MMDDYYYY
-function formatDate(date: Date): string {
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const year = date.getFullYear();
-  return `${month}${day}${year}`;
 }
 
 export const runtime = 'nodejs';
@@ -50,12 +42,12 @@ export async function POST(
       );
     }
 
-    // Validate file type
-    const allowedTypes = ['.xlsx', '.xls', '.docx', '.doc', '.pdf'];
+    // Validate file type - Only PDF and image formats allowed for security
+    const allowedTypes = ['.pdf', '.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg'];
     const fileExtension = file.name.split('.').pop()?.toLowerCase();
     if (!fileExtension || !allowedTypes.includes(`.${fileExtension}`)) {
       return NextResponse.json(
-        { error: 'Invalid file type. Allowed types: .xlsx, .xls, .docx, .doc, .pdf' },
+        { error: 'Invalid file type. Only PDF and image files are allowed for security purposes.' },
         { status: 400 }
       );
     }
@@ -68,10 +60,9 @@ export async function POST(
       );
     }
 
-    // Create new filename
+    // Create new filename - Format: SQ[squadron]-[reportName]
     const reportName = getReportName(params.id);
-    const currentDate = formatDate(new Date());
-    const newFileName = `SQ${squadronNumber}-${reportName}-Report-${currentDate}.${fileExtension}`;
+    const newFileName = `SQ${squadronNumber}-${reportName}.${fileExtension}`;
     const fileBuffer = await file.arrayBuffer();
 
     // Prepare email data
