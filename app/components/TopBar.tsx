@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 export default function TopBar() {
   const pathname = usePathname();
@@ -42,7 +44,7 @@ export default function TopBar() {
           <Link href="/" className="uppercase text-xl font-jost font-bold hover:text-blue-200">
             Detachment of Florida Reporting Portal
           </Link>
-          <span className="text-sm text-blue-200">v1.0.2</span>
+          <span className="text-sm text-blue-200">v1.0.3</span>
         </div>
         <div className="flex items-center space-x-4">
           <span className="text-sm text-blue-200">{currentDate}</span> 

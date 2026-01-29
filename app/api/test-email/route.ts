@@ -3,7 +3,7 @@ import { sendEmail } from '@/app/services/emailService';
 
 export const runtime = 'edge';
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
     const testData = {
       to: process.env.ADMIN_EMAIL || 'test@example.com',

@@ -1,7 +1,5 @@
 'use client';
 
-import { useRef } from 'react';
-
 interface JumpBarProps {
   onSelect: (reportId: string) => void;
 }
