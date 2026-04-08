@@ -192,8 +192,9 @@ export default function AdminPanel() {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg shadow-md p-8 max-w-md w-full">
+      <div className="min-h-screen bg-gray-100 p-4 flex items-center justify-center">
+        <div className="w-[85vw] max-w-full flex justify-center">
+          <div className="bg-white rounded-lg shadow-md p-8 max-w-md w-full">
           <h1 className="text-2xl font-bold text-center text-blue-800 mb-6">
             Admin Panel Login
           </h1>
@@ -249,6 +250,7 @@ export default function AdminPanel() {
               {loading ? 'Logging in...' : 'Login'}
             </button>
           </form>
+          </div>
         </div>
       </div>
     );
@@ -256,7 +258,7 @@ export default function AdminPanel() {
 
   return (
     <div className="min-h-screen bg-gray-100 p-4">
-      <div className="max-w-4xl mx-auto">
+      <div className="w-[85vw] max-w-full mx-auto">
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-4">
             <div>
@@ -320,8 +322,11 @@ export default function AdminPanel() {
                   Last updated: {new Date(config.lastUpdated).toLocaleString()} by {config.updatedBy}
                 </div>
               )}
-              <div className="mb-6">
-                <label htmlFor="adminName" className="block text-sm font-medium text-gray-700 mb-2">
+              <div className="mb-6 flex flex-wrap items-center gap-3">
+                <label
+                  htmlFor="adminName"
+                  className="text-sm font-medium text-gray-700 shrink-0"
+                >
                   Your Name (required for audit trail)
                 </label>
                 <input
@@ -329,7 +334,7 @@ export default function AdminPanel() {
                   type="text"
                   value={adminName}
                   onChange={(e) => setAdminName(e.target.value)}
-                  className="w-full max-w-md px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  className="flex-1 min-w-[12rem] max-w-xl px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Enter your name"
                 />
               </div>
@@ -351,29 +356,25 @@ export default function AdminPanel() {
             </p>
 
             {config && (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {Object.entries(config.reportEmails).map(([id, report]) => (
-                  <div key={id} className="border border-gray-200 rounded-md p-3 md:p-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 md:gap-x-6 gap-y-3 items-start">
-                      <div className="min-w-0 md:pr-2">
-                        <h3 className="font-semibold text-gray-800 leading-tight">{report.reportName}</h3>
-                        <p className="text-sm text-gray-600 mt-1">{report.fullName}</p>
-                      </div>
-                      <div className="min-w-0">
-                        <label className="sr-only" htmlFor={`report-email-${id}`}>
-                          Email addresses for {report.reportName}
-                        </label>
-                        <textarea
-                          id={`report-email-${id}`}
-                          value={report.email}
-                          onChange={(e) => handleEmailChange(id, e.target.value)}
-                          rows={2}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
-                          placeholder="one@example.com, two@example.com"
-                          aria-label={`Email addresses for ${report.reportName}`}
-                        />
-                      </div>
+                  <div key={id} className="border border-gray-200 rounded-md p-2 md:p-3">
+                    <div className="text-sm text-gray-800 mb-2 min-w-0 leading-snug">
+                      <span className="font-semibold">{report.reportName}</span>
+                      <span className="text-gray-600"> {report.fullName}</span>
                     </div>
+                    <label className="sr-only" htmlFor={`report-email-${id}`}>
+                      Email addresses for {report.reportName}
+                    </label>
+                    <textarea
+                      id={`report-email-${id}`}
+                      value={report.email}
+                      onChange={(e) => handleEmailChange(id, e.target.value)}
+                      rows={2}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
+                      placeholder="one@example.com, two@example.com"
+                      aria-label={`Email addresses for ${report.reportName}`}
+                    />
                   </div>
                 ))}
               </div>
