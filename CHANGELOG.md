@@ -5,6 +5,15 @@ All notable changes to the FL SAL Reporting Portal will be documented in this fi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.3] - 2026-04-08
+
+### Added
+- **Include sample data** control on admin Submission History: checkbox to show or hide six placeholder squadrons (per report tab) for layout review without code changes.
+
+### Changed
+- **Submission history** layout: three-column grid with **one squadron per cell** (squadron as `SQ {n}`, date submitted as **MM/DD/YY**, submitter name); rows fill left to right, then wrap. Submissions are sorted **ascending by squadron number** (numeric).
+- Default **tracking-since** date when env `SUBMISSION_TRACKING_START` is unset is aligned with submission logging go-live (see `app/lib/submissionTracking.ts`).
+
 ## [1.1.2] - 2026-02-02
 
 ### Added
@@ -216,6 +225,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added validation for email recipients
 - Secured file upload process with type and size restrictions
 
+[1.1.3]: https://github.com/CMRapp/FL-Sons-Reporting/compare/v1.1.2...v1.1.3
 [1.1.2]: https://github.com/yourusername/reporting/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/yourusername/reporting/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/yourusername/reporting/compare/v1.0.5...v1.1.0
