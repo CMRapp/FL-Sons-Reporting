@@ -356,11 +356,14 @@ export default function AdminPanel() {
             </p>
 
             {config && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {[...Object.entries(config.reportEmails)]
                   .sort(([a], [b]) => Number(a) - Number(b))
                   .map(([id, report]) => (
-                    <div key={id} className="border border-gray-200 rounded-md p-2 min-w-0 flex flex-col">
+                    <div
+                      key={id}
+                      className="min-w-0 flex flex-col rounded-lg border border-gray-200/90 bg-gradient-to-b from-gray-50 to-white p-2.5 shadow-[0_1px_2px_rgba(0,0,0,0.05)] ring-1 ring-gray-900/[0.04] transition-shadow hover:shadow-[0_2px_6px_rgba(0,0,0,0.06)]"
+                    >
                       <div className="text-sm text-gray-800 mb-1 min-w-0 leading-snug">
                         <span className="font-semibold">{report.reportName}</span>
                         <span className="text-gray-600"> {report.fullName}</span>
