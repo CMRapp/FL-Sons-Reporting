@@ -356,27 +356,29 @@ export default function AdminPanel() {
             </p>
 
             {config && (
-              <div className="space-y-2">
-                {Object.entries(config.reportEmails).map(([id, report]) => (
-                  <div key={id} className="border border-gray-200 rounded-md p-2 md:p-3">
-                    <div className="text-sm text-gray-800 mb-2 min-w-0 leading-snug">
-                      <span className="font-semibold">{report.reportName}</span>
-                      <span className="text-gray-600"> {report.fullName}</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {[...Object.entries(config.reportEmails)]
+                  .sort(([a], [b]) => Number(a) - Number(b))
+                  .map(([id, report]) => (
+                    <div key={id} className="border border-gray-200 rounded-md p-2 min-w-0 flex flex-col">
+                      <div className="text-sm text-gray-800 mb-1 min-w-0 leading-snug">
+                        <span className="font-semibold">{report.reportName}</span>
+                        <span className="text-gray-600"> {report.fullName}</span>
+                      </div>
+                      <label className="sr-only" htmlFor={`report-email-${id}`}>
+                        Email addresses for {report.reportName}
+                      </label>
+                      <textarea
+                        id={`report-email-${id}`}
+                        value={report.email}
+                        onChange={(e) => handleEmailChange(id, e.target.value)}
+                        rows={1}
+                        className="w-full px-2 py-1 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 font-mono text-sm leading-tight resize-y min-h-[2rem]"
+                        placeholder="one@example.com, two@example.com"
+                        aria-label={`Email addresses for ${report.reportName}`}
+                      />
                     </div>
-                    <label className="sr-only" htmlFor={`report-email-${id}`}>
-                      Email addresses for {report.reportName}
-                    </label>
-                    <textarea
-                      id={`report-email-${id}`}
-                      value={report.email}
-                      onChange={(e) => handleEmailChange(id, e.target.value)}
-                      rows={2}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
-                      placeholder="one@example.com, two@example.com"
-                      aria-label={`Email addresses for ${report.reportName}`}
-                    />
-                  </div>
-                ))}
+                  ))}
               </div>
             )}
 
