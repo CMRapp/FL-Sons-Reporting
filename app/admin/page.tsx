@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { getServiceYear } from '@/app/utils/serviceYear';
-import { REPORT_ORDER, REPORT_METADATA } from '@/app/lib/reports';
+import { REPORT_ORDER, REPORT_METADATA, type ReportUploadId } from '@/app/lib/reports';
 
 interface ReportEmail {
   reportName: string;
@@ -53,6 +53,7 @@ export default function AdminPanel() {
   const [submissions, setSubmissions] = useState<SubmissionRecord[]>([]);
   const [submissionsLoading, setSubmissionsLoading] = useState(false);
   const [submissionsError, setSubmissionsError] = useState('');
+  const [historyTabId, setHistoryTabId] = useState<ReportUploadId>('1');
   const serviceYear = getServiceYear();
 
   const fetchSubmissions = useCallback(async () => {
@@ -91,6 +92,9 @@ export default function AdminPanel() {
     }
     return map;
   }, [submissions]);
+
+  const activeHistoryMeta = REPORT_METADATA[historyTabId];
+  const activeHistoryRows = submissionsByReport[historyTabId] ?? [];
 
   const fetchConfig = async () => {
     try {
@@ -188,6 +192,7 @@ export default function AdminPanel() {
     setAdminSection('emails');
     setSubmissions([]);
     setSubmissionsError('');
+    setHistoryTabId('1');
   };
 
   if (!isAuthenticated) {
@@ -404,8 +409,8 @@ export default function AdminPanel() {
               <div>
                 <h2 className="text-xl font-semibold text-gray-800">Submission history</h2>
                 <p className="text-sm text-gray-600 mt-1">
-                  Logged when a report file is successfully emailed. Open each report type to see who
-                  submitted and when.
+                  Logged when a report file is successfully emailed. Choose a report type below to
+                  see who submitted and when.
                 </p>
               </div>
               <button
@@ -422,69 +427,93 @@ export default function AdminPanel() {
               <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md text-sm">{submissionsError}</div>
             )}
 
-            <div className="space-y-2">
+            <div
+              className="flex flex-wrap gap-2 border-b border-gray-200 pb-3 mb-4 overflow-x-auto"
+              role="tablist"
+              aria-label="Report types"
+            >
               {REPORT_ORDER.map((rid) => {
                 const meta = REPORT_METADATA[rid];
-                const rows = submissionsByReport[rid] ?? [];
+                const count = (submissionsByReport[rid] ?? []).length;
+                const active = historyTabId === rid;
                 return (
-                  <details
+                  <button
                     key={rid}
-                    className="border border-gray-200 rounded-lg overflow-hidden [&_summary::-webkit-details-marker]:hidden"
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    id={`history-tab-${rid}`}
+                    aria-controls={`history-panel-${rid}`}
+                    onClick={() => setHistoryTabId(rid)}
+                    className={`inline-flex shrink-0 items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
+                      active
+                        ? 'border-blue-600 bg-blue-600 text-white'
+                        : 'border-gray-200 bg-gray-50 text-gray-800 hover:bg-gray-100'
+                    }`}
                   >
-                    <summary className="cursor-pointer list-none flex flex-wrap items-center justify-between gap-2 px-4 py-3 bg-gray-50 hover:bg-gray-100 font-medium text-gray-900">
-                      <span className="min-w-0">
-                        <span className="text-blue-800">{meta.code}</span>
-                        <span className="text-gray-500 font-normal text-sm ml-2">{meta.label}</span>
-                      </span>
-                      <span className="text-sm bg-white border border-gray-200 rounded-full px-3 py-0.5 text-gray-700">
-                        {rows.length} submission{rows.length !== 1 ? 's' : ''}
-                      </span>
-                    </summary>
-                    <div className="p-3 border-t border-gray-100 bg-white">
-                      {rows.length === 0 ? (
-                        <p className="text-sm text-gray-500 italic py-2 px-1">No submissions yet.</p>
-                      ) : (
-                        <div className="overflow-x-auto">
-                          <table className="min-w-full text-sm text-left">
-                            <thead>
-                              <tr className="border-b border-gray-200 text-gray-600">
-                                <th className="py-2 pr-4 font-medium whitespace-nowrap">Submitted</th>
-                                <th className="py-2 pr-4 font-medium whitespace-nowrap">Name</th>
-                                <th className="py-2 pr-4 font-medium whitespace-nowrap">Title</th>
-                                <th className="py-2 pr-4 font-medium whitespace-nowrap">Email</th>
-                                <th className="py-2 pr-4 font-medium whitespace-nowrap">Sq</th>
-                                <th className="py-2 pr-4 font-medium whitespace-nowrap">Dist</th>
-                                <th className="py-2 pr-4 font-medium whitespace-nowrap">File</th>
-                                <th className="py-2 pr-4 font-medium whitespace-nowrap">Size</th>
-                                <th className="py-2 font-medium whitespace-nowrap">IP</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {rows.map((row) => (
-                                <tr key={row.id} className="border-b border-gray-100 align-top">
-                                  <td className="py-2 pr-4 whitespace-nowrap text-gray-800">
-                                    {new Date(row.createdAt).toLocaleString()}
-                                  </td>
-                                  <td className="py-2 pr-4 text-gray-800">{row.userName}</td>
-                                  <td className="py-2 pr-4 text-gray-700">{row.userTitle}</td>
-                                  <td className="py-2 pr-4 break-all text-gray-700">{row.userEmail}</td>
-                                  <td className="py-2 pr-4 whitespace-nowrap">{row.squadronNumber}</td>
-                                  <td className="py-2 pr-4 whitespace-nowrap">{row.districtNumber}</td>
-                                  <td className="py-2 pr-4 font-mono text-xs break-all">{row.fileName}</td>
-                                  <td className="py-2 pr-4 whitespace-nowrap">{formatBytes(row.fileSize)}</td>
-                                  <td className="py-2 text-gray-500 font-mono text-xs whitespace-nowrap">
-                                    {row.submitterIp ?? '—'}
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-                    </div>
-                  </details>
+                    <span>{meta.code}</span>
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-xs tabular-nums ${
+                        active ? 'bg-blue-500/90 text-white' : 'bg-white text-gray-600 border border-gray-200'
+                      }`}
+                    >
+                      {count}
+                    </span>
+                  </button>
                 );
               })}
+            </div>
+
+            <div
+              role="tabpanel"
+              id={`history-panel-${historyTabId}`}
+              aria-labelledby={`history-tab-${historyTabId}`}
+              className="rounded-lg border border-gray-200 bg-gray-50/50 p-4"
+            >
+              <p className="text-sm text-gray-700 mb-3">
+                <span className="font-semibold text-blue-900">{activeHistoryMeta.code}</span>
+                <span className="text-gray-600"> — {activeHistoryMeta.label}</span>
+              </p>
+              {activeHistoryRows.length === 0 ? (
+                <p className="text-sm text-gray-500 italic py-2">No submissions yet.</p>
+              ) : (
+                <div className="overflow-x-auto rounded-md border border-gray-200 bg-white">
+                  <table className="min-w-full text-sm text-left">
+                    <thead>
+                      <tr className="border-b border-gray-200 text-gray-600 bg-gray-50">
+                        <th className="py-2 pr-4 pl-3 font-medium whitespace-nowrap">Submitted</th>
+                        <th className="py-2 pr-4 font-medium whitespace-nowrap">Name</th>
+                        <th className="py-2 pr-4 font-medium whitespace-nowrap">Title</th>
+                        <th className="py-2 pr-4 font-medium whitespace-nowrap">Email</th>
+                        <th className="py-2 pr-4 font-medium whitespace-nowrap">Sq</th>
+                        <th className="py-2 pr-4 font-medium whitespace-nowrap">Dist</th>
+                        <th className="py-2 pr-4 font-medium whitespace-nowrap">File</th>
+                        <th className="py-2 pr-4 font-medium whitespace-nowrap">Size</th>
+                        <th className="py-2 pr-3 font-medium whitespace-nowrap">IP</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {activeHistoryRows.map((row) => (
+                        <tr key={row.id} className="border-b border-gray-100 align-top">
+                          <td className="py-2 pr-4 pl-3 whitespace-nowrap text-gray-800">
+                            {new Date(row.createdAt).toLocaleString()}
+                          </td>
+                          <td className="py-2 pr-4 text-gray-800">{row.userName}</td>
+                          <td className="py-2 pr-4 text-gray-700">{row.userTitle}</td>
+                          <td className="py-2 pr-4 break-all text-gray-700">{row.userEmail}</td>
+                          <td className="py-2 pr-4 whitespace-nowrap">{row.squadronNumber}</td>
+                          <td className="py-2 pr-4 whitespace-nowrap">{row.districtNumber}</td>
+                          <td className="py-2 pr-4 font-mono text-xs break-all">{row.fileName}</td>
+                          <td className="py-2 pr-4 whitespace-nowrap">{formatBytes(row.fileSize)}</td>
+                          <td className="py-2 pr-3 text-gray-500 font-mono text-xs whitespace-nowrap">
+                            {row.submitterIp ?? '—'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </div>
         )}
