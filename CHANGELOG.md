@@ -5,6 +5,19 @@ All notable changes to the FL SAL Reporting Portal will be documented in this fi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.4] - 2026-04-08
+
+### Removed
+- **Squadron Officer Change (SOC)** and **District Officers Report (DOR)** — removed from the public upload portal, Jump bar, admin email settings, submission history tabs, `reportEmails.json`, and env wiring (`EMAIL_9` / `EMAIL_10` no longer exposed in `next.config.js`).
+
+### Changed
+- Upload API **`POST /api/upload/[id]`** accepts only report ids **1–8**; unknown ids return **404**.
+- Admin **`GET /api/admin/submissions`** only returns submissions for active report ids; invalid `reportId` query returns **400**.
+- Admin **`POST /api/admin/config`** ignores upserts for removed report ids (stale clients).
+
+### Deployment
+- Run **`npx prisma migrate deploy`** so migration **`20260408140000_remove_soc_and_dor_reports`** deletes **`report_emails`** and **`report_submissions`** rows for `reportId` **9** and **10**.
+
 ## [1.1.3] - 2026-04-08
 
 ### Added
@@ -225,6 +238,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added validation for email recipients
 - Secured file upload process with type and size restrictions
 
+[1.1.4]: https://github.com/CMRapp/FL-Sons-Reporting/compare/v1.1.3...v1.1.4
 [1.1.3]: https://github.com/CMRapp/FL-Sons-Reporting/compare/v1.1.2...v1.1.3
 [1.1.2]: https://github.com/yourusername/reporting/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/yourusername/reporting/compare/v1.1.0...v1.1.1

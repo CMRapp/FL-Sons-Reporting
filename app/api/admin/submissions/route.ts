@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/app/lib/prisma';
 import { verifyAdminAuth } from '@/app/lib/adminAuth';
 import { getSubmissionTrackingStartIso } from '@/app/lib/submissionTracking';
+import { isValidReportUploadId, REPORT_ORDER } from '@/app/lib/reports';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -16,6 +17,9 @@ export async function GET(request: NextRequest) {
 
   const reportId = request.nextUrl.searchParams.get('reportId');
   const limitParam = request.nextUrl.searchParams.get('limit');
+  if (reportId && !isValidReportUploadId(reportId)) {
+    return NextResponse.json({ error: 'Invalid reportId' }, { status: 400 });
+  }
   let limit = DEFAULT_LIMIT;
   if (limitParam) {
     const n = parseInt(limitParam, 10);
@@ -26,7 +30,9 @@ export async function GET(request: NextRequest) {
 
   try {
     const submissions = await prisma.reportSubmission.findMany({
-      where: reportId ? { reportId } : undefined,
+      where: reportId
+        ? { reportId }
+        : { reportId: { in: [...REPORT_ORDER] } },
       orderBy: { createdAt: 'desc' },
       take: limit,
     });

@@ -1,4 +1,5 @@
 import prisma from '@/app/lib/prisma';
+import { REPORT_ORDER } from '@/app/lib/reports';
 import { parseEmailList } from '@/app/utils/emailList';
 
 /**
@@ -43,6 +44,7 @@ export async function getReportRecipients(reportId: string): Promise<string[] | 
 export async function getAllReportEmails() {
   try {
     const reports = await prisma.reportEmail.findMany({
+      where: { reportId: { in: [...REPORT_ORDER] } },
       orderBy: { reportId: 'asc' },
     });
     return reports;

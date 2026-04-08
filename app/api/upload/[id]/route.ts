@@ -3,7 +3,11 @@ import { sendEmail } from '@/app/services/emailService';
 import { getReportRecipients } from '@/app/utils/reportConfig';
 import { shouldBccArchiveCopy } from '@/app/utils/emailList';
 import prisma from '@/app/lib/prisma';
-import { getReportCodeByUploadId, getReportLabelByUploadId } from '@/app/lib/reports';
+import {
+  getReportCodeByUploadId,
+  getReportLabelByUploadId,
+  isValidReportUploadId,
+} from '@/app/lib/reports';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -13,6 +17,10 @@ export async function POST(
   { params }: { params: { id: string } }
 ): Promise<NextResponse> {
   try {
+    if (!isValidReportUploadId(params.id)) {
+      return NextResponse.json({ error: 'Invalid report type' }, { status: 404 });
+    }
+
     const formData = await request.formData();
     const userName = formData.get('userName') as string;
     const userEmail = formData.get('userEmail') as string;

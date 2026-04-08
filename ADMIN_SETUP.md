@@ -32,7 +32,7 @@ npm install dotenv
 node scripts/populate-config.js
 ```
 
-This will read the current EMAIL_1 through EMAIL_10 environment variables and populate the `app/config/reportEmails.json` file.
+This will read the current `EMAIL_1` through `EMAIL_8` environment variables and populate the `app/config/reportEmails.json` file.
 
 ### 3. Access the Admin Panel
 
@@ -48,7 +48,7 @@ Visit `https://your-domain.com/admin` and log in with your admin password.
 
 ### Updating Email Addresses
 
-1. After logging in, you'll see all 10 report types
+1. After logging in, you'll see all eight report types
 2. Enter or update the email address for each report
 3. Enter your name in the "Your Name" field (required for audit trail)
 4. Click "Save Configuration"
@@ -65,8 +65,6 @@ The system manages email addresses for these report types:
 6. **C&Y** - Children & Youth
 7. **SIR** - Squadron Information Report
 8. **SDR** - Annual Squadron Data Report
-9. **SOC** - Squadron Officer Change
-10. **DOR** - District Officers Report
 
 ## Service Year Logic
 
@@ -104,7 +102,7 @@ The email addresses are stored in `app/config/reportEmails.json`:
 The system uses this priority order for email addresses:
 
 1. **Config File**: First checks `reportEmails.json`
-2. **Environment Variables**: Falls back to `EMAIL_1` through `EMAIL_10`
+2. **Environment Variables**: Falls back to `EMAIL_1` through `EMAIL_8`
 3. **Error**: Returns error if neither is available
 
 This ensures backward compatibility with existing environment variable setup.
@@ -137,8 +135,6 @@ EMAIL_5=amer.reports@floridasons.org
 EMAIL_6=cy.reports@floridasons.org
 EMAIL_7=reports@floridasons.org
 EMAIL_8=sdr@floridasons.org
-EMAIL_9=reports@floridasons.org
-EMAIL_10=reports@floridasons.org
 ```
 
 ## Troubleshooting

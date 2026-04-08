@@ -5,6 +5,12 @@ import Image from 'next/image';
 import Modal from './Modal';
 import JumpBar from './JumpBar';
 import { getServiceYear } from '@/app/utils/serviceYear';
+import {
+  REPORT_ORDER,
+  REPORT_METADATA,
+  REPORT_DOM_SLUG,
+  REPORT_SECTION_UI,
+} from '@/app/lib/reports';
 
 interface FormData {
   userName: string;
@@ -26,8 +32,12 @@ const UploadForm = () => {
     districtNumber: '',
   });
 
-  const [files, setFiles] = useState<(File | null)[]>(Array(10).fill(null));
-  const [uploadStatus, setUploadStatus] = useState<string[]>(Array(10).fill(''));
+  const [files, setFiles] = useState<(File | null)[]>(() =>
+    Array(REPORT_ORDER.length).fill(null)
+  );
+  const [uploadStatus, setUploadStatus] = useState<string[]>(() =>
+    Array(REPORT_ORDER.length).fill('')
+  );
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMessage, setModalMessage] = useState('');
   const [currentReportName, setCurrentReportName] = useState('');
@@ -38,7 +48,7 @@ const UploadForm = () => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
     // Clear all error messages when user starts typing
-    setUploadStatus(Array(10).fill(''));
+    setUploadStatus(Array(REPORT_ORDER.length).fill(''));
   };
 
   const validateEmail = (email: string): boolean => {
@@ -156,18 +166,8 @@ const UploadForm = () => {
     }
 
     const formDataToSend = new FormData();
-    
-    // Get the report name based on the index
-    const reportName = index === 0 ? 'NCSR' :
-                      index === 1 ? 'DCSR' :
-                      index === 2 ? 'VA&R' :
-                      index === 3 ? 'VAVS-VOY' :
-                      index === 4 ? 'AMERICANISM' :
-                      index === 5 ? 'C&Y' :
-                      index === 6 ? 'SIR' :
-                      index === 7 ? 'SDR' :
-                      index === 8 ? 'SOC' :
-                      'DOR';
+    const reportId = REPORT_ORDER[index];
+    const reportName = REPORT_METADATA[reportId].code;
 
     setCurrentReportName(reportName);
 
@@ -193,7 +193,7 @@ const UploadForm = () => {
         ...sanitizedFormData
       });
 
-      const response = await fetch(`/api/upload/${index + 1}`, {
+      const response = await fetch(`/api/upload/${reportId}`, {
         method: 'POST',
         body: formDataToSend,
       });
@@ -399,132 +399,70 @@ const UploadForm = () => {
         {/* Report Submission Sections */}
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {Array.from({ length: 10 }, (_, index) => (
-              <div 
-                key={index} 
-                id={`report-${index === 0 ? 'ncsr' : 
-                         index === 1 ? 'dcsr' : 
-                         index === 2 ? 'var' :
-                         index === 3 ? 'vavs-voy' :
-                         index === 4 ? 'americanism' :
-                         index === 5 ? 'cy' :
-                         index === 6 ? 'sir' :
-                         index === 7 ? 'sdr' :
-                         index === 8 ? 'soc' :
-                         'dor'}`} 
-                className={`bg-white shadow-md rounded-lg p-6 transition-all duration-300 ${
-                  focusedReport === `report-${index === 0 ? 'ncsr' : 
-                                   index === 1 ? 'dcsr' : 
-                                   index === 2 ? 'var' :
-                                   index === 3 ? 'vavs-voy' :
-                                   index === 4 ? 'americanism' :
-                                   index === 5 ? 'cy' :
-                                   index === 6 ? 'sir' :
-                                   index === 7 ? 'sdr' :
-                                   index === 8 ? 'soc' :
-                                   'dor'}` 
-                  ? 'ring-4 ring-blue-500 ring-opacity-50 shadow-lg' 
-                  : ''
-                }`}
-              >
-                <h4 className="text-l font-semibold text-black uppercase">
-                  {index === 0 ? 'National Consolidated Squadron Report (NCSR)' : 
-                   index === 1 ? 'Detachment Consolidated Squadron Report (DCSR)' : 
-                   index === 2 ? 'Veterans Affairs & Rehabilitation (VA&R)' :
-                   index === 3 ? 'VAVS Volunteer of the Year' :
-                   index === 4 ? 'Americanism' :
-                   index === 5 ? 'Children & Youth (C&Y)' :
-                   index === 6 ? 'Squadron Information Report (SIR)' :
-                   index === 7 ? 'Annual Squadron Data Report (SDR)' :
-                   index === 8 ? 'Squadron Officer Change (SOC)' :
-                   index === 9 ? 'District Officers Report (DOR)' :
-                   `Upload #${index + 1}`}
-                </h4>
-                <p className="text-blue-500">
-                  {index === 0 ? 'Submit a COPY of your NATIONAL CSR.' :
-                   index === 1 ? 'Annual DETACHMENT report highlighting your squadron\'s activities and achievements.' :
-                   index === 2 ? 'Annual report on your squadron\'s VA&R activities.' :
-                   index === 3 ? 'Nomination form for VAVS Volunteer of the Year award' :
-                   index === 4 ? 'Annual Report on your squadron\'s Americanism programs and activities' :
-                   index === 5 ? 'Annual Report on your squadron\'s C&Y programs and activities' :
-                   index === 6 ? 'Squadron Officer Information Report' :
-                   index === 7 ? 'Indicates the amount of dues money to collect by National' :
-                   index === 8 ? 'Documentation of squadron officer changes and updates' :
-                   'Report on district-level officer appointments and changes'}
-                </p>
-                <p className="text-red-500 font-bold italic uppercase text-xs my-2">
-                  {index === 0 ? 'Use the myLegion.org portal to submit your NATIONAL CSR or mail a copy to National Headquarters.' :
-                   index === 1 ? 'Due by May 15th of every year' :
-                   index === 2 ? 'Due by May 15th of every year' :
-                   index === 3 ? 'Due by May 15th of every year' :
-                   index === 4 ? 'Due by May 15th of every year' :
-                   index === 5 ? 'Due by May 15th of every year' :
-                   index === 6 ? 'Must be submitted immediately following squadron elections' :
-                   index === 7 ? 'Only submit if there has been a change in your dues or squadron information. Submit by April 9th of every year':
-                   index === 8 ? 'Due within 30 days of a squadron officer officer change' :
-                   'Due immediately following your District Constitutional Conference (DCC)'}
-                </p>
-                <div className="flex items-center space-x-4">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2">
-                      <Image
-                        src="/file.svg"
-                        alt="Upload icon"
-                        width={20}
-                        height={20}
-                        className="text-gray-500"
-                        aria-hidden="true"
-                      />
-                      <input
-                        type="file"
-                        onChange={(e) => handleFileChange(index, e)}
-                        accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.bmp,.svg"
-                        className="flex-1 text-black placeholder:text-gray-200 file:text-blue-500"
-                        aria-label={`Upload file for ${index === 0 ? 'National Consolidated Squadron Report' : 
-                                   index === 1 ? 'Detachment Consolidated Squadron Report' : 
-                                   index === 2 ? 'Veterans Affairs & Rehabilitation' :
-                                   index === 3 ? 'VAVS Volunteer of the Year' :
-                                   index === 4 ? 'Americanism' :
-                                   index === 5 ? 'Children & Youth' :
-                                   index === 6 ? 'Squadron Information Report' :
-                                   index === 7 ? 'Annual Squadron Data Report' :
-                                   index === 8 ? 'Squadron Officer Change' :
-                                   'District Officers Report'}`}
-                      />
+            {REPORT_ORDER.map((reportId, index) => {
+              const domId = `report-${REPORT_DOM_SLUG[reportId]}`;
+              const ui = REPORT_SECTION_UI[reportId];
+              const title = REPORT_METADATA[reportId].label;
+              return (
+                <div
+                  key={reportId}
+                  id={domId}
+                  className={`bg-white shadow-md rounded-lg p-6 transition-all duration-300 ${
+                    focusedReport === domId
+                      ? 'ring-4 ring-blue-500 ring-opacity-50 shadow-lg'
+                      : ''
+                  }`}
+                >
+                  <h4 className="text-l font-semibold text-black uppercase">{title}</h4>
+                  <p className="text-blue-500">{ui.summary}</p>
+                  <p className="text-red-500 font-bold italic uppercase text-xs my-2">{ui.dueNote}</p>
+                  <div className="flex items-center space-x-4">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2">
+                        <Image
+                          src="/file.svg"
+                          alt="Upload icon"
+                          width={20}
+                          height={20}
+                          className="text-gray-500"
+                          aria-hidden="true"
+                        />
+                        <input
+                          type="file"
+                          onChange={(e) => handleFileChange(index, e)}
+                          accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.bmp,.svg"
+                          className="flex-1 text-black placeholder:text-gray-200 file:text-blue-500"
+                          aria-label={`Upload file for ${ui.uploadAriaName}`}
+                        />
+                      </div>
+                      <p className="text-sm text-gray-500 mt-1">
+                        Accepted file types: PDF and image files only (Max size: 10MB)
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => handleSubmit(index)}
+                        disabled={uploadStatus[index] === 'Uploading...'}
+                        className={`mt-2 bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                          uploadStatus[index] === 'Uploading...' ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
+                        aria-label={`Submit ${ui.uploadAriaName}`}
+                        aria-disabled={uploadStatus[index] === 'Uploading...'}
+                      >
+                        {uploadStatus[index] === 'Uploading...' ? 'Uploading...' : 'Submit'}
+                      </button>
                     </div>
-                    <p className="text-sm text-gray-500 mt-1">Accepted file types: PDF and image files only (Max size: 10MB)</p>
-                    <button
-                      onClick={() => handleSubmit(index)}
-                      disabled={uploadStatus[index] === 'Uploading...'}
-                      className={`mt-2 bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                        uploadStatus[index] === 'Uploading...' ? 'opacity-50 cursor-not-allowed' : ''
-                      }`}
-                      aria-label={`Submit ${index === 0 ? 'National Consolidated Squadron Report' : 
-                                 index === 1 ? 'Detachment Consolidated Squadron Report' : 
-                                 index === 2 ? 'Veterans Affairs & Rehabilitation' :
-                                 index === 3 ? 'VAVS Volunteer of the Year' :
-                                 index === 4 ? 'Americanism' :
-                                 index === 5 ? 'Children & Youth' :
-                                 index === 6 ? 'Squadron Information Report' :
-                                 index === 7 ? 'Annual Squadron Data Report' :
-                                 index === 8 ? 'Squadron Officer Change' :
-                                 'District Officers Report'}`}
-                      aria-disabled={uploadStatus[index] === 'Uploading...'}
-                    >
-                      {uploadStatus[index] === 'Uploading...' ? 'Uploading...' : 'Submit'}
-                    </button>
                   </div>
+                  {uploadStatus[index] && (
+                    <p
+                      className={`mt-2 ${uploadStatus[index].includes('Error') ? 'text-red-500' : 'text-green-500'}`}
+                      role="alert"
+                    >
+                      {uploadStatus[index]}
+                    </p>
+                  )}
                 </div>
-                {uploadStatus[index] && (
-                  <p 
-                    className={`mt-2 ${uploadStatus[index].includes('Error') ? 'text-red-500' : 'text-green-500'}`}
-                    role="alert"
-                  >
-                    {uploadStatus[index]}
-                  </p>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>

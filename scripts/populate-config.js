@@ -16,7 +16,7 @@ const configData = fs.readFileSync(configPath, 'utf-8');
 const config = JSON.parse(configData);
 
 // Populate with environment variable values
-for (let i = 1; i <= 10; i++) {
+for (let i = 1; i <= 8; i++) {
   const envEmail = process.env[`EMAIL_${i}`];
   if (envEmail && config.reportEmails[i.toString()]) {
     // Extract just the email (remove comments)

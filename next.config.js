@@ -24,8 +24,6 @@ const nextConfig = {
     EMAIL_6: process.env.EMAIL_6,
     EMAIL_7: process.env.EMAIL_7,
     EMAIL_8: process.env.EMAIL_8,
-    EMAIL_9: process.env.EMAIL_9,
-    EMAIL_10: process.env.EMAIL_10,
     EMAIL_USER: process.env.EMAIL_USER,
     EMAIL_PASSWORD: process.env.EMAIL_PASSWORD,
     ADMIN_EMAIL: process.env.ADMIN_EMAIL,

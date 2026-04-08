@@ -25,8 +25,6 @@ A modern web application for the Florida Sons of the American Legion (FL SAL) to
 6. Children & Youth (C&Y)
 7. Squadron Information Report (SIR)
 8. Annual Squadron Data Report (SDR)
-9. Squadron Officer Change (SOC)
-10. District Officers Report (DOR)
 
 ## Prerequisites
 
@@ -106,7 +104,7 @@ yarn start
 Required environment variables in `.env.local`:
 
 - `ADMIN_EMAIL`: Default email for notifications
-- `EMAIL_1` through `EMAIL_10`: Report-specific recipient emails
+- `EMAIL_1` through `EMAIL_8`: Report-specific recipient emails (fallback when not set in the admin database)
 
 ## Contributing
 

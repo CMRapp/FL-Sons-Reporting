@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/app/lib/prisma';
 import { verifyAdminAuth } from '@/app/lib/adminAuth';
 import { normalizeEmailListString, validateEmailList } from '@/app/utils/emailList';
+import { REPORT_ORDER } from '@/app/lib/reports';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -18,6 +19,7 @@ export async function GET(request: NextRequest) {
     }
 
     const reportEmails = await prisma.reportEmail.findMany({
+      where: { reportId: { in: [...REPORT_ORDER] } },
       orderBy: { reportId: 'asc' },
     });
 
@@ -83,9 +85,11 @@ export async function POST(request: NextRequest) {
 
     const timestamp = new Date().toISOString();
     const changes: string[] = [];
+    const allowedReportIds = new Set<string>(REPORT_ORDER as unknown as string[]);
 
-    // Update all report emails in database
+    // Update all report emails in database (ignore removed report types if a stale client sends them)
     for (const [reportId, reportData] of Object.entries(reportEmails)) {
+      if (!allowedReportIds.has(reportId)) continue;
       const data = reportData as { reportName: string; fullName: string; email: string };
       
       const oldReport = await prisma.reportEmail.findUnique({

@@ -13,7 +13,7 @@ datasource db {
 // Report email configuration
 model ReportEmail {
   id          String   @id @default(cuid())
-  reportId    String   @unique // 1-10
+  reportId    String   @unique // 1-8
   reportName  String   // NCSR, DCSR, etc.
   fullName    String   // Full report name
   email       String   // Email address for this report

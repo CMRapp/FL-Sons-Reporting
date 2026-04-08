@@ -1,23 +1,15 @@
-'use client';
+import { REPORT_ORDER, REPORT_METADATA, REPORT_DOM_SLUG } from '@/app/lib/reports';
 
 interface JumpBarProps {
   onSelect: (reportId: string) => void;
 }
 
-const JumpBar = ({ onSelect }: JumpBarProps) => {
-  const reports = [
-    { id: 'report-ncsr', name: 'National Consolidated Squadron Report (NCSR)' },
-    { id: 'report-dcsr', name: 'Detachment Consolidated Squadron Report (DCSR)' },
-    { id: 'report-var', name: 'Veterans Affairs & Rehabilitation (VA&R)' },
-    { id: 'report-vavs-voy', name: 'VAVS Volunteer of the Year' },
-    { id: 'report-americanism', name: 'Americanism' },
-    { id: 'report-cy', name: 'Children & Youth (C&Y)' },
-    { id: 'report-sir', name: 'Squadron Information Report (SIR)' },
-    { id: 'report-sdr', name: 'Annual Squadron Data Report (SDR)' },
-    { id: 'report-soc', name: 'Squadron Officer Change (SOC)' },
-    { id: 'report-dor', name: 'District Officers Report (DOR)' }
-  ];
+const reports = REPORT_ORDER.map((id) => ({
+  id: `report-${REPORT_DOM_SLUG[id]}`,
+  name: REPORT_METADATA[id].label,
+}));
 
+const JumpBar = ({ onSelect }: JumpBarProps) => {
   return (
     <div className="bg-white shadow-md rounded-lg p-4 mb-8">
       <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
@@ -41,4 +33,4 @@ const JumpBar = ({ onSelect }: JumpBarProps) => {
   );
 };
 
-export default JumpBar; 
+export default JumpBar;
