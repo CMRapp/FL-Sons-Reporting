@@ -4,6 +4,9 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { getServiceYear } from '@/app/utils/serviceYear';
 import { REPORT_ORDER, REPORT_METADATA, type ReportUploadId } from '@/app/lib/reports';
 
+/** Set to false (or delete sample helpers below) after review — sample rows are for UI preview only. */
+const INCLUDE_HISTORY_SAMPLE_DATA = true;
+
 interface ReportEmail {
   reportName: string;
   fullName: string;
@@ -34,10 +37,56 @@ interface SubmissionRecord {
 
 type AdminSection = 'emails' | 'history';
 
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+function squadronSortKey(squadronNumber: string): number {
+  const n = parseInt(String(squadronNumber).replace(/\D/g, ''), 10);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function formatSubmittedMMDDYY(iso: string): string {
+  const d = new Date(iso);
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const yy = String(d.getFullYear()).slice(-2);
+  return `${mm}/${dd}/${yy}`;
+}
+
+function formatSquadronColumn(squadronNumber: string): string {
+  const n = squadronNumber.trim();
+  return n ? `SQ ${n}` : 'SQ —';
+}
+
+/** Preview-only: six squadrons (out of order) to verify sorting; duplicated per report tab. */
+function buildSampleSubmissions(): SubmissionRecord[] {
+  const bases: Pick<SubmissionRecord, 'squadronNumber' | 'userName' | 'createdAt'>[] = [
+    { squadronNumber: '305', userName: 'Alex Morgan', createdAt: '2026-04-07T14:30:00.000Z' },
+    { squadronNumber: '102', userName: 'Jordan Lee', createdAt: '2026-04-06T09:15:00.000Z' },
+    { squadronNumber: '88', userName: 'Sam Rivera', createdAt: '2026-04-08T11:00:00.000Z' },
+    { squadronNumber: '441', userName: 'Taylor Chen', createdAt: '2026-04-05T16:45:00.000Z' },
+    { squadronNumber: '15', userName: 'Riley Brooks', createdAt: '2026-04-08T08:20:00.000Z' },
+    { squadronNumber: '220', userName: 'Casey Nguyen', createdAt: '2026-04-07T10:05:00.000Z' },
+  ];
+  const out: SubmissionRecord[] = [];
+  for (const rid of REPORT_ORDER) {
+    const meta = REPORT_METADATA[rid];
+    bases.forEach((b, i) => {
+      out.push({
+        id: `__sample__${rid}_${i}`,
+        reportId: rid,
+        reportName: meta.code,
+        fullName: meta.label,
+        userName: b.userName,
+        userEmail: 'sample@preview.local',
+        userTitle: 'Sample',
+        squadronNumber: b.squadronNumber,
+        districtNumber: '—',
+        fileName: 'sample-preview.pdf',
+        fileSize: 0,
+        submitterIp: null,
+        createdAt: b.createdAt,
+      });
+    });
+  }
+  return out;
 }
 
 export default function AdminPanel() {
@@ -86,20 +135,30 @@ export default function AdminPanel() {
     fetchSubmissions();
   }, [isAuthenticated, adminSection, password, fetchSubmissions]);
 
+  const submissionsWithPreviewSamples = useMemo(() => {
+    if (!INCLUDE_HISTORY_SAMPLE_DATA) return submissions;
+    return [...submissions, ...buildSampleSubmissions()];
+  }, [submissions]);
+
   const submissionsByReport = useMemo(() => {
     const map: Record<string, SubmissionRecord[]> = {};
     for (const id of REPORT_ORDER) {
       map[id] = [];
     }
-    for (const s of submissions) {
+    for (const s of submissionsWithPreviewSamples) {
       if (!map[s.reportId]) map[s.reportId] = [];
       map[s.reportId].push(s);
     }
     return map;
-  }, [submissions]);
+  }, [submissionsWithPreviewSamples]);
 
   const activeHistoryMeta = REPORT_METADATA[historyTabId];
-  const activeHistoryRows = submissionsByReport[historyTabId] ?? [];
+  const activeHistoryRows = useMemo(() => {
+    const rows = submissionsByReport[historyTabId] ?? [];
+    return [...rows].sort(
+      (a, b) => squadronSortKey(a.squadronNumber) - squadronSortKey(b.squadronNumber)
+    );
+  }, [submissionsByReport, historyTabId]);
 
   const fetchConfig = async () => {
     try {
@@ -497,40 +556,38 @@ export default function AdminPanel() {
                 <span className="font-semibold text-blue-900">{activeHistoryMeta.code}</span>
                 <span className="text-gray-600"> — {activeHistoryMeta.label}</span>
               </p>
+              {INCLUDE_HISTORY_SAMPLE_DATA && (
+                <p className="text-sm text-amber-900 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 mb-3">
+                  Preview: six sample squadrons are included on every report tab (remove when done — set{' '}
+                  <code className="text-xs bg-amber-100 px-1 rounded">INCLUDE_HISTORY_SAMPLE_DATA</code> to{' '}
+                  <code className="text-xs bg-amber-100 px-1 rounded">false</code> in{' '}
+                  <code className="text-xs bg-amber-100 px-1 rounded">app/admin/page.tsx</code>).
+                </p>
+              )}
               {activeHistoryRows.length === 0 ? (
                 <p className="text-sm text-gray-500 italic py-2">No submissions yet.</p>
               ) : (
                 <div className="overflow-x-auto rounded-md border border-gray-200 bg-white">
-                  <table className="min-w-full text-sm text-left">
+                  <table className="min-w-full text-sm text-left table-fixed w-full max-w-3xl">
                     <thead>
                       <tr className="border-b border-gray-200 text-gray-600 bg-gray-50">
-                        <th className="py-2 pr-4 pl-3 font-medium whitespace-nowrap">Submitted</th>
-                        <th className="py-2 pr-4 font-medium whitespace-nowrap">Name</th>
-                        <th className="py-2 pr-4 font-medium whitespace-nowrap">Title</th>
-                        <th className="py-2 pr-4 font-medium whitespace-nowrap">Email</th>
-                        <th className="py-2 pr-4 font-medium whitespace-nowrap">Sq</th>
-                        <th className="py-2 pr-4 font-medium whitespace-nowrap">Dist</th>
-                        <th className="py-2 pr-4 font-medium whitespace-nowrap">File</th>
-                        <th className="py-2 pr-4 font-medium whitespace-nowrap">Size</th>
-                        <th className="py-2 pr-3 font-medium whitespace-nowrap">IP</th>
+                        <th className="py-2 pr-3 pl-3 font-medium w-[28%]">Squadron</th>
+                        <th className="py-2 pr-3 font-medium w-[24%] whitespace-nowrap">
+                          Date submitted
+                        </th>
+                        <th className="py-2 pr-3 font-medium w-[48%]">Submitted by</th>
                       </tr>
                     </thead>
                     <tbody>
                       {activeHistoryRows.map((row) => (
                         <tr key={row.id} className="border-b border-gray-100 align-top">
-                          <td className="py-2 pr-4 pl-3 whitespace-nowrap text-gray-800">
-                            {new Date(row.createdAt).toLocaleString()}
+                          <td className="py-2 pr-3 pl-3 whitespace-nowrap text-gray-900 font-medium tabular-nums">
+                            {formatSquadronColumn(row.squadronNumber)}
                           </td>
-                          <td className="py-2 pr-4 text-gray-800">{row.userName}</td>
-                          <td className="py-2 pr-4 text-gray-700">{row.userTitle}</td>
-                          <td className="py-2 pr-4 break-all text-gray-700">{row.userEmail}</td>
-                          <td className="py-2 pr-4 whitespace-nowrap">{row.squadronNumber}</td>
-                          <td className="py-2 pr-4 whitespace-nowrap">{row.districtNumber}</td>
-                          <td className="py-2 pr-4 font-mono text-xs break-all">{row.fileName}</td>
-                          <td className="py-2 pr-4 whitespace-nowrap">{formatBytes(row.fileSize)}</td>
-                          <td className="py-2 pr-3 text-gray-500 font-mono text-xs whitespace-nowrap">
-                            {row.submitterIp ?? '—'}
+                          <td className="py-2 pr-3 whitespace-nowrap text-gray-800 tabular-nums">
+                            {formatSubmittedMMDDYY(row.createdAt)}
                           </td>
+                          <td className="py-2 pr-3 text-gray-800">{row.userName}</td>
                         </tr>
                       ))}
                     </tbody>
