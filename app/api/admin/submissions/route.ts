@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/app/lib/prisma';
 import { verifyAdminAuth } from '@/app/lib/adminAuth';
+import { getSubmissionTrackingStartIso } from '@/app/lib/submissionTracking';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -30,7 +31,10 @@ export async function GET(request: NextRequest) {
       take: limit,
     });
 
-    return NextResponse.json({ submissions });
+    return NextResponse.json({
+      submissions,
+      trackingStartedAt: getSubmissionTrackingStartIso(),
+    });
   } catch (error) {
     console.error('Error fetching submissions:', error);
     return NextResponse.json(

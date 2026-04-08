@@ -54,6 +54,7 @@ export default function AdminPanel() {
   const [submissionsLoading, setSubmissionsLoading] = useState(false);
   const [submissionsError, setSubmissionsError] = useState('');
   const [historyTabId, setHistoryTabId] = useState<ReportUploadId>('1');
+  const [trackingStartedAt, setTrackingStartedAt] = useState<string | null>(null);
   const serviceYear = getServiceYear();
 
   const fetchSubmissions = useCallback(async () => {
@@ -67,8 +68,12 @@ export default function AdminPanel() {
         const err = await res.json().catch(() => ({}));
         throw new Error((err as { error?: string }).error || 'Failed to load submissions');
       }
-      const data = (await res.json()) as { submissions: SubmissionRecord[] };
+      const data = (await res.json()) as {
+        submissions: SubmissionRecord[];
+        trackingStartedAt?: string;
+      };
       setSubmissions(data.submissions ?? []);
+      setTrackingStartedAt(data.trackingStartedAt ?? null);
     } catch (e) {
       setSubmissionsError(e instanceof Error ? e.message : 'Failed to load submissions');
     } finally {
@@ -193,6 +198,7 @@ export default function AdminPanel() {
     setSubmissions([]);
     setSubmissionsError('');
     setHistoryTabId('1');
+    setTrackingStartedAt(null);
   };
 
   if (!isAuthenticated) {
@@ -304,7 +310,7 @@ export default function AdminPanel() {
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              Submission history
+              Submission History
             </button>
           </div>
 
@@ -407,10 +413,27 @@ export default function AdminPanel() {
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
               <div>
-                <h2 className="text-xl font-semibold text-gray-800">Submission history</h2>
+                <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                  <h2 className="text-xl font-semibold text-gray-800">Submission History</h2>
+                  {trackingStartedAt && (
+                    <span className="text-sm font-normal text-gray-600">
+                      · Tracking since{' '}
+                      {new Date(
+                        trackingStartedAt.length === 10
+                          ? `${trackingStartedAt}T12:00:00`
+                          : trackingStartedAt
+                      ).toLocaleDateString(undefined, {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                      })}
+                    </span>
+                  )}
+                </div>
                 <p className="text-sm text-gray-600 mt-1">
-                  Logged when a report file is successfully emailed. Choose a report type below to
-                  see who submitted and when.
+                  Logged when a report file is successfully emailed. Submissions received before
+                  tracking began are not listed here. Choose a report type below to see who
+                  submitted and when.
                 </p>
               </div>
               <button
