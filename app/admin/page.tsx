@@ -251,25 +251,31 @@ export default function AdminPanel() {
           </p>
 
           {config && (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {Object.entries(config.reportEmails).map(([id, report]) => (
-                <div key={id} className="border border-gray-200 rounded-md p-4">
-                  <div className="flex items-start justify-between mb-2">
-                    <div>
-                      <h3 className="font-semibold text-gray-800">
+                <div key={id} className="border border-gray-200 rounded-md p-3 md:p-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 md:gap-x-6 gap-y-3 items-start">
+                    <div className="min-w-0 md:pr-2">
+                      <h3 className="font-semibold text-gray-800 leading-tight">
                         {report.reportName}
                       </h3>
-                      <p className="text-sm text-gray-600">{report.fullName}</p>
+                      <p className="text-sm text-gray-600 mt-1">{report.fullName}</p>
+                    </div>
+                    <div className="min-w-0">
+                      <label className="sr-only" htmlFor={`report-email-${id}`}>
+                        Email addresses for {report.reportName}
+                      </label>
+                      <textarea
+                        id={`report-email-${id}`}
+                        value={report.email}
+                        onChange={(e) => handleEmailChange(id, e.target.value)}
+                        rows={2}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
+                        placeholder="one@example.com, two@example.com"
+                        aria-label={`Email addresses for ${report.reportName}`}
+                      />
                     </div>
                   </div>
-                  <textarea
-                    value={report.email}
-                    onChange={(e) => handleEmailChange(id, e.target.value)}
-                    rows={3}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
-                    placeholder="one@example.com, two@example.com"
-                    aria-label={`Email addresses for ${report.reportName}`}
-                  />
                 </div>
               ))}
             </div>
