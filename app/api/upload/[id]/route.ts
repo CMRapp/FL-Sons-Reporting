@@ -2,23 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { sendEmail } from '@/app/services/emailService';
 import { getReportRecipients } from '@/app/utils/reportConfig';
 import { shouldBccArchiveCopy } from '@/app/utils/emailList';
-
-// Helper function to get report name from ID
-function getReportName(id: string): string {
-  const reportNames: { [key: string]: string } = {
-    '1': 'NCSR',
-    '2': 'DCSR',
-    '3': 'VAR',
-    '4': 'VAVS-Vol-Yr',
-    '5': 'AMERICANISM',
-    '6': 'CY',
-    '7': 'SIR',
-    '8': 'SDR',
-    '9': 'SOC',
-    '10': 'DOR'
-  };
-  return reportNames[id] || 'Unknown Report';
-}
+import prisma from '@/app/lib/prisma';
+import { getReportCodeByUploadId, getReportLabelByUploadId } from '@/app/lib/reports';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -62,7 +47,8 @@ export async function POST(
     }
 
     // Create new filename - Format: SQ[squadron]-[reportName]
-    const reportName = getReportName(params.id);
+    const reportName = getReportCodeByUploadId(params.id);
+    const reportFullName = getReportLabelByUploadId(params.id);
     const newFileName = `SQ${squadronNumber}-${reportName}.${fileExtension}`;
     const fileBuffer = await file.arrayBuffer();
 
@@ -116,6 +102,31 @@ File: ${newFileName}
         { error: 'Failed to send email', details: emailResult.error },
         { status: 500 }
       );
+    }
+
+    const submitterIp =
+      request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+      request.headers.get('x-real-ip') ||
+      null;
+
+    try {
+      await prisma.reportSubmission.create({
+        data: {
+          reportId: params.id,
+          reportName,
+          fullName: reportFullName,
+          userName,
+          userEmail,
+          userTitle,
+          squadronNumber,
+          districtNumber,
+          fileName: newFileName,
+          fileSize: file.size,
+          submitterIp,
+        },
+      });
+    } catch (logErr) {
+      console.error('Failed to log report submission:', logErr);
     }
 
     // Send confirmation email to user

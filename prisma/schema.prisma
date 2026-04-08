@@ -36,6 +36,27 @@ model ConfigMetadata {
   @@map("config_metadata")
 }
 
+// Successful portal submissions (logged after report email is sent)
+model ReportSubmission {
+  id             String   @id @default(cuid())
+  reportId       String
+  reportName     String
+  fullName       String
+  userName       String
+  userEmail      String
+  userTitle      String
+  squadronNumber String
+  districtNumber String
+  fileName       String
+  fileSize       Int
+  submitterIp    String?
+  createdAt      DateTime @default(now())
+
+  @@index([reportId, createdAt])
+  @@index([createdAt])
+  @@map("report_submissions")
+}
+
 // Audit log for configuration changes
 model AuditLog {
   id          String   @id @default(cuid())

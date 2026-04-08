@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { getServiceYear } from '@/app/utils/serviceYear';
+import { REPORT_ORDER, REPORT_METADATA } from '@/app/lib/reports';
 
 interface ReportEmail {
   reportName: string;
@@ -15,6 +16,30 @@ interface ReportConfig {
   updatedBy: string;
 }
 
+interface SubmissionRecord {
+  id: string;
+  reportId: string;
+  reportName: string;
+  fullName: string;
+  userName: string;
+  userEmail: string;
+  userTitle: string;
+  squadronNumber: string;
+  districtNumber: string;
+  fileName: string;
+  fileSize: number;
+  submitterIp: string | null;
+  createdAt: string;
+}
+
+type AdminSection = 'emails' | 'history';
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 export default function AdminPanel() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState('');
@@ -24,7 +49,48 @@ export default function AdminPanel() {
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState<'success' | 'error'>('success');
   const [adminName, setAdminName] = useState('');
+  const [adminSection, setAdminSection] = useState<AdminSection>('emails');
+  const [submissions, setSubmissions] = useState<SubmissionRecord[]>([]);
+  const [submissionsLoading, setSubmissionsLoading] = useState(false);
+  const [submissionsError, setSubmissionsError] = useState('');
   const serviceYear = getServiceYear();
+
+  const fetchSubmissions = useCallback(async () => {
+    setSubmissionsLoading(true);
+    setSubmissionsError('');
+    try {
+      const res = await fetch('/api/admin/submissions?limit=2000', {
+        headers: { Authorization: `Bearer ${password}` },
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error((err as { error?: string }).error || 'Failed to load submissions');
+      }
+      const data = (await res.json()) as { submissions: SubmissionRecord[] };
+      setSubmissions(data.submissions ?? []);
+    } catch (e) {
+      setSubmissionsError(e instanceof Error ? e.message : 'Failed to load submissions');
+    } finally {
+      setSubmissionsLoading(false);
+    }
+  }, [password]);
+
+  useEffect(() => {
+    if (!isAuthenticated || adminSection !== 'history' || !password) return;
+    fetchSubmissions();
+  }, [isAuthenticated, adminSection, password, fetchSubmissions]);
+
+  const submissionsByReport = useMemo(() => {
+    const map: Record<string, SubmissionRecord[]> = {};
+    for (const id of REPORT_ORDER) {
+      map[id] = [];
+    }
+    for (const s of submissions) {
+      if (!map[s.reportId]) map[s.reportId] = [];
+      map[s.reportId].push(s);
+    }
+    return map;
+  }, [submissions]);
 
   const fetchConfig = async () => {
     try {
@@ -119,6 +185,9 @@ export default function AdminPanel() {
     setConfig(null);
     setAdminName('');
     setMessage('');
+    setAdminSection('emails');
+    setSubmissions([]);
+    setSubmissionsError('');
   };
 
   if (!isAuthenticated) {
@@ -189,108 +258,230 @@ export default function AdminPanel() {
     <div className="min-h-screen bg-gray-100 p-4">
       <div className="max-w-4xl mx-auto">
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <div className="flex justify-between items-center mb-4">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-4">
             <div>
-              <h1 className="text-3xl font-bold text-blue-800">
-                Report Email Configuration
-              </h1>
+              <h1 className="text-3xl font-bold text-blue-800">Admin Panel</h1>
               <p className="text-gray-600 mt-2">Service Year: {serviceYear}</p>
             </div>
             <button
+              type="button"
               onClick={handleLogout}
-              className="bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700 transition-colors"
+              className="bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700 transition-colors self-start"
             >
               Logout
             </button>
           </div>
 
-          {config?.lastUpdated && (
-            <div className="text-sm text-gray-500 mb-4">
-              Last updated: {new Date(config.lastUpdated).toLocaleString()} by {config.updatedBy}
-            </div>
-          )}
+          <div className="flex flex-wrap gap-2 border-b border-gray-200 pb-3 mb-4" role="tablist">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={adminSection === 'emails'}
+              onClick={() => setAdminSection('emails')}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                adminSection === 'emails'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Email settings
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={adminSection === 'history'}
+              onClick={() => setAdminSection('history')}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                adminSection === 'history'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Submission history
+            </button>
+          </div>
 
           {message && (
-            <div className={`mb-4 p-3 rounded-md text-sm ${
-              messageType === 'success' 
-                ? 'bg-green-100 text-green-700' 
-                : 'bg-red-100 text-red-700'
-            }`}>
+            <div
+              className={`mb-4 p-3 rounded-md text-sm ${
+                messageType === 'success'
+                  ? 'bg-green-100 text-green-700'
+                  : 'bg-red-100 text-red-700'
+              }`}
+            >
               {message}
             </div>
           )}
 
-          <div className="mb-6">
-            <label htmlFor="adminName" className="block text-sm font-medium text-gray-700 mb-2">
-              Your Name (required for audit trail)
-            </label>
-            <input
-              id="adminName"
-              type="text"
-              value={adminName}
-              onChange={(e) => setAdminName(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Enter your name"
-              required
-            />
-          </div>
+          {adminSection === 'emails' && (
+            <>
+              {config?.lastUpdated && (
+                <div className="text-sm text-gray-500 mb-4">
+                  Last updated: {new Date(config.lastUpdated).toLocaleString()} by {config.updatedBy}
+                </div>
+              )}
+              <div className="mb-6">
+                <label htmlFor="adminName" className="block text-sm font-medium text-gray-700 mb-2">
+                  Your Name (required for audit trail)
+                </label>
+                <input
+                  id="adminName"
+                  type="text"
+                  value={adminName}
+                  onChange={(e) => setAdminName(e.target.value)}
+                  className="w-full max-w-md px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Enter your name"
+                />
+              </div>
+            </>
+          )}
         </div>
 
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-xl font-semibold text-gray-800 mb-4">
-            Report Email Addresses
-          </h2>
-          <p className="text-sm text-gray-600 mb-2">
-            Enter one or more addresses per report, separated by commas, semicolons, or new lines.
-          </p>
-          <p className="text-sm text-blue-800 bg-blue-50 border border-blue-100 rounded-md p-3 mb-6">
-            Every submission is also BCC&apos;d to{' '}
-            <strong>reports@floridasons.org</strong> (or{' '}
-            <code className="text-xs bg-white px-1 rounded">REPORTS_ARCHIVE_EMAIL</code> when set),
-            unless that address is already one of the recipients above — then no extra BCC is sent.
-          </p>
+        {adminSection === 'emails' && (
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h2 className="text-xl font-semibold text-gray-800 mb-4">Report Email Addresses</h2>
+            <p className="text-sm text-gray-600 mb-2">
+              Enter one or more addresses per report, separated by commas, semicolons, or new lines.
+            </p>
+            <p className="text-sm text-blue-800 bg-blue-50 border border-blue-100 rounded-md p-3 mb-6">
+              Every submission is also BCC&apos;d to{' '}
+              <strong>reports@floridasons.org</strong> (or{' '}
+              <code className="text-xs bg-white px-1 rounded">REPORTS_ARCHIVE_EMAIL</code> when set),
+              unless that address is already one of the recipients above — then no extra BCC is sent.
+            </p>
 
-          {config && (
-            <div className="space-y-3">
-              {Object.entries(config.reportEmails).map(([id, report]) => (
-                <div key={id} className="border border-gray-200 rounded-md p-3 md:p-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 md:gap-x-6 gap-y-3 items-start">
-                    <div className="min-w-0 md:pr-2">
-                      <h3 className="font-semibold text-gray-800 leading-tight">
-                        {report.reportName}
-                      </h3>
-                      <p className="text-sm text-gray-600 mt-1">{report.fullName}</p>
-                    </div>
-                    <div className="min-w-0">
-                      <label className="sr-only" htmlFor={`report-email-${id}`}>
-                        Email addresses for {report.reportName}
-                      </label>
-                      <textarea
-                        id={`report-email-${id}`}
-                        value={report.email}
-                        onChange={(e) => handleEmailChange(id, e.target.value)}
-                        rows={2}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
-                        placeholder="one@example.com, two@example.com"
-                        aria-label={`Email addresses for ${report.reportName}`}
-                      />
+            {config && (
+              <div className="space-y-3">
+                {Object.entries(config.reportEmails).map(([id, report]) => (
+                  <div key={id} className="border border-gray-200 rounded-md p-3 md:p-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 md:gap-x-6 gap-y-3 items-start">
+                      <div className="min-w-0 md:pr-2">
+                        <h3 className="font-semibold text-gray-800 leading-tight">{report.reportName}</h3>
+                        <p className="text-sm text-gray-600 mt-1">{report.fullName}</p>
+                      </div>
+                      <div className="min-w-0">
+                        <label className="sr-only" htmlFor={`report-email-${id}`}>
+                          Email addresses for {report.reportName}
+                        </label>
+                        <textarea
+                          id={`report-email-${id}`}
+                          value={report.email}
+                          onChange={(e) => handleEmailChange(id, e.target.value)}
+                          rows={2}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
+                          placeholder="one@example.com, two@example.com"
+                          aria-label={`Email addresses for ${report.reportName}`}
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
 
-          <div className="mt-6 flex justify-end">
-            <button
-              onClick={handleSave}
-              disabled={loading || !adminName.trim()}
-              className="bg-blue-600 text-white py-2 px-6 rounded-md hover:bg-blue-700 disabled:bg-gray-400 transition-colors"
-            >
-              {loading ? 'Saving...' : 'Save Configuration'}
-            </button>
+            <div className="mt-6 flex justify-end">
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={loading || !adminName.trim()}
+                className="bg-blue-600 text-white py-2 px-6 rounded-md hover:bg-blue-700 disabled:bg-gray-400 transition-colors"
+              >
+                {loading ? 'Saving...' : 'Save Configuration'}
+              </button>
+            </div>
           </div>
-        </div>
+        )}
+
+        {adminSection === 'history' && (
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-800">Submission history</h2>
+                <p className="text-sm text-gray-600 mt-1">
+                  Logged when a report file is successfully emailed. Open each report type to see who
+                  submitted and when.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => fetchSubmissions()}
+                disabled={submissionsLoading}
+                className="bg-gray-100 text-gray-800 py-2 px-4 rounded-md hover:bg-gray-200 disabled:opacity-50 text-sm font-medium"
+              >
+                {submissionsLoading ? 'Loading…' : 'Refresh'}
+              </button>
+            </div>
+
+            {submissionsError && (
+              <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md text-sm">{submissionsError}</div>
+            )}
+
+            <div className="space-y-2">
+              {REPORT_ORDER.map((rid) => {
+                const meta = REPORT_METADATA[rid];
+                const rows = submissionsByReport[rid] ?? [];
+                return (
+                  <details
+                    key={rid}
+                    className="border border-gray-200 rounded-lg overflow-hidden [&_summary::-webkit-details-marker]:hidden"
+                  >
+                    <summary className="cursor-pointer list-none flex flex-wrap items-center justify-between gap-2 px-4 py-3 bg-gray-50 hover:bg-gray-100 font-medium text-gray-900">
+                      <span className="min-w-0">
+                        <span className="text-blue-800">{meta.code}</span>
+                        <span className="text-gray-500 font-normal text-sm ml-2">{meta.label}</span>
+                      </span>
+                      <span className="text-sm bg-white border border-gray-200 rounded-full px-3 py-0.5 text-gray-700">
+                        {rows.length} submission{rows.length !== 1 ? 's' : ''}
+                      </span>
+                    </summary>
+                    <div className="p-3 border-t border-gray-100 bg-white">
+                      {rows.length === 0 ? (
+                        <p className="text-sm text-gray-500 italic py-2 px-1">No submissions yet.</p>
+                      ) : (
+                        <div className="overflow-x-auto">
+                          <table className="min-w-full text-sm text-left">
+                            <thead>
+                              <tr className="border-b border-gray-200 text-gray-600">
+                                <th className="py-2 pr-4 font-medium whitespace-nowrap">Submitted</th>
+                                <th className="py-2 pr-4 font-medium whitespace-nowrap">Name</th>
+                                <th className="py-2 pr-4 font-medium whitespace-nowrap">Title</th>
+                                <th className="py-2 pr-4 font-medium whitespace-nowrap">Email</th>
+                                <th className="py-2 pr-4 font-medium whitespace-nowrap">Sq</th>
+                                <th className="py-2 pr-4 font-medium whitespace-nowrap">Dist</th>
+                                <th className="py-2 pr-4 font-medium whitespace-nowrap">File</th>
+                                <th className="py-2 pr-4 font-medium whitespace-nowrap">Size</th>
+                                <th className="py-2 font-medium whitespace-nowrap">IP</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {rows.map((row) => (
+                                <tr key={row.id} className="border-b border-gray-100 align-top">
+                                  <td className="py-2 pr-4 whitespace-nowrap text-gray-800">
+                                    {new Date(row.createdAt).toLocaleString()}
+                                  </td>
+                                  <td className="py-2 pr-4 text-gray-800">{row.userName}</td>
+                                  <td className="py-2 pr-4 text-gray-700">{row.userTitle}</td>
+                                  <td className="py-2 pr-4 break-all text-gray-700">{row.userEmail}</td>
+                                  <td className="py-2 pr-4 whitespace-nowrap">{row.squadronNumber}</td>
+                                  <td className="py-2 pr-4 whitespace-nowrap">{row.districtNumber}</td>
+                                  <td className="py-2 pr-4 font-mono text-xs break-all">{row.fileName}</td>
+                                  <td className="py-2 pr-4 whitespace-nowrap">{formatBytes(row.fileSize)}</td>
+                                  <td className="py-2 text-gray-500 font-mono text-xs whitespace-nowrap">
+                                    {row.submitterIp ?? '—'}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  </details>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

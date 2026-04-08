@@ -1,27 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/app/lib/prisma';
+import { verifyAdminAuth } from '@/app/lib/adminAuth';
 import { normalizeEmailListString, validateEmailList } from '@/app/utils/emailList';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-
-// Helper function to verify admin credentials
-function verifyAdminAuth(request: NextRequest): boolean {
-  const authHeader = request.headers.get('authorization');
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return false;
-  }
-  
-  const token = authHeader.substring(7);
-  const adminPassword = process.env.ADMIN_PASSWORD;
-  
-  if (!adminPassword) {
-    console.error('ADMIN_PASSWORD not configured');
-    return false;
-  }
-  
-  return token === adminPassword;
-}
 
 // GET - Retrieve current configuration from database
 export async function GET(request: NextRequest) {

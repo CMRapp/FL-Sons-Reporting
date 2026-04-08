@@ -5,6 +5,21 @@ All notable changes to the FL SAL Reporting Portal will be documented in this fi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.2] - 2026-02-02
+
+### Added
+- **Submission history** in the admin panel: tabbed UI with **Email settings** vs **Submission history**.
+- **Accordion** grouped by report type (NCSR through DOR) with counts; each panel lists submissions (date/time, name, title, email, squadron, district, file name, size, submitter IP).
+- **`ReportSubmission`** database table; each successful report email triggers a log row (failures to log do not block the upload).
+- **`GET /api/admin/submissions`** (admin auth) with optional `reportId` and `limit` query params.
+- Shared **`app/lib/reports.ts`** metadata used by the upload route and admin UI.
+
+### Changed
+- Admin config auth helper moved to **`app/lib/adminAuth.ts`** (shared with submissions API).
+
+### Deployment
+- Run **`npx prisma migrate deploy`** (or apply migration `20260202120000_add_report_submissions`) on production before relying on history.
+
 ## [1.1.1] - 2026-02-02
 
 ### Added
@@ -201,6 +216,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added validation for email recipients
 - Secured file upload process with type and size restrictions
 
+[1.1.2]: https://github.com/yourusername/reporting/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/yourusername/reporting/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/yourusername/reporting/compare/v1.0.5...v1.1.0
 [1.0.5]: https://github.com/yourusername/reporting/compare/v1.0.4...v1.0.5
