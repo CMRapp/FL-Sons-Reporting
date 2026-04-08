@@ -5,6 +5,16 @@ All notable changes to the FL SAL Reporting Portal will be documented in this fi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-02-02
+
+### Added
+- **Archive copy (BCC)** — Every report submission email is blind-copied to `reports@floridasons.org` unless that address is already in the primary recipient list. Override with env `REPORTS_ARCHIVE_EMAIL`.
+- **Multiple recipients per report** — Admin panel accepts comma-, semicolon-, or newline-separated addresses; stored normalized in the database.
+- `emailList` helpers for parsing, validation, and deduplication.
+
+### Changed
+- `sendEmail` supports multiple `to` addresses and optional `bcc` (SMTP2GO API).
+
 ## [1.1.0] - 2026-01-14
 
 ### Added
@@ -191,6 +201,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added validation for email recipients
 - Secured file upload process with type and size restrictions
 
+[1.1.1]: https://github.com/yourusername/reporting/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/yourusername/reporting/compare/v1.0.5...v1.1.0
 [1.0.5]: https://github.com/yourusername/reporting/compare/v1.0.4...v1.0.5
 [1.0.4]: https://github.com/yourusername/reporting/compare/v1.0.3...v1.0.4

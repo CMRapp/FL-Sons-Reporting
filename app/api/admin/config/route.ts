@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/app/lib/prisma';
+import { normalizeEmailListString, validateEmailList } from '@/app/utils/emailList';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -86,13 +87,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    for (const [id, report] of Object.entries(reportEmails)) {
-      const { email } = report as { email: string };
-      if (email && !emailRegex.test(email)) {
+    for (const [, report] of Object.entries(reportEmails)) {
+      const data = report as { email: string; reportName?: string };
+      const err = validateEmailList(data.email || '');
+      if (err) {
         return NextResponse.json(
-          { error: `Invalid email format for ${id}` },
+          { error: `${data.reportName || 'Report'}: ${err}` },
           { status: 400 }
         );
       }
@@ -109,21 +109,23 @@ export async function POST(request: NextRequest) {
         where: { reportId },
       });
 
+      const normalizedEmail = normalizeEmailListString(data.email || '');
+
       await prisma.reportEmail.upsert({
         where: { reportId },
         update: {
-          email: data.email,
+          email: normalizedEmail,
         },
         create: {
           reportId,
           reportName: data.reportName,
           fullName: data.fullName,
-          email: data.email,
+          email: normalizedEmail,
         },
       });
 
-      if (oldReport && oldReport.email !== data.email) {
-        changes.push(`${data.reportName}: ${oldReport.email || '(empty)'} → ${data.email || '(empty)'}`);
+      if (oldReport && oldReport.email !== normalizedEmail) {
+        changes.push(`${data.reportName}: ${oldReport.email || '(empty)'} → ${normalizedEmail || '(empty)'}`);
       }
     }
 

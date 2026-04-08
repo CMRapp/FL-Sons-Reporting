@@ -1,5 +1,11 @@
+function asEmailArray(value: string | string[]): string[] {
+  const arr = Array.isArray(value) ? value : [value];
+  return arr.map((e) => e.trim()).filter(Boolean);
+}
+
 interface EmailData {
-  to: string;
+  to: string | string[];
+  bcc?: string | string[];
   from: string;
   subject: string;
   text: string;
@@ -25,7 +31,8 @@ interface EmailResponse {
 }
 
 async function sendEmailToSMTP(data: {
-  to: string;
+  to: string | string[];
+  bcc?: string | string[];
   from: string;
   subject: string;
   text: string;
@@ -37,8 +44,12 @@ async function sendEmailToSMTP(data: {
   }>;
 }) {
   try {
+    const toList = asEmailArray(data.to);
+    const bccList = data.bcc ? asEmailArray(data.bcc) : [];
+
     console.log('Preparing SMTP2GO email request:', {
-      to: data.to,
+      to: toList,
+      bcc: bccList.length ? bccList : undefined,
       from: data.from,
       subject: data.subject,
       hasAttachments: !!data.attachments
@@ -50,7 +61,7 @@ async function sendEmailToSMTP(data: {
 
     const formData = new FormData();
     formData.append('api_key', process.env.SMTP2GO_API_KEY);
-    formData.append('to', data.to);
+    formData.append('to', toList.join(','));
     formData.append('from', data.from);
     formData.append('subject', data.subject);
     formData.append('text', data.text);
@@ -72,7 +83,8 @@ async function sendEmailToSMTP(data: {
       },
       body: JSON.stringify({
         api_key: process.env.SMTP2GO_API_KEY,
-        to: [data.to],
+        to: toList,
+        ...(bccList.length ? { bcc: bccList } : {}),
         sender: data.from,
         subject: data.subject,
         text_body: data.text,
@@ -120,10 +132,14 @@ export async function sendEmail(data: EmailData): Promise<EmailResponse> {
       return { success: false, error: 'Email service not configured' };
     }
 
+    const toList = asEmailArray(data.to);
+    const bccList = data.bcc ? asEmailArray(data.bcc) : [];
+
     const requestData = {
       api_key: process.env.SMTP2GO_API_KEY,
       sender: data.from,
-      to: [data.to],
+      to: toList,
+      ...(bccList.length ? { bcc: bccList } : {}),
       subject: data.subject,
       text_body: data.text,
       html_body: data.html,

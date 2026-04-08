@@ -1,38 +1,35 @@
 import prisma from '@/app/lib/prisma';
+import { parseEmailList } from '@/app/utils/emailList';
 
 /**
- * Get the email address for a specific report type from database
- * Falls back to environment variable if database is not available or email is not set
- * 
- * @param reportId - The report ID (1-10)
- * @returns The email address for the report, or null if not found
+ * Recipient list for a report type (comma/semicolon/newline in DB or env).
+ * Falls back to environment variable if database is empty or unavailable.
  */
-export async function getReportEmail(reportId: string): Promise<string | null> {
+export async function getReportRecipients(reportId: string): Promise<string[] | null> {
   try {
-    // Try to read from database
     const reportConfig = await prisma.reportEmail.findUnique({
       where: { reportId },
     });
-    
-    if (reportConfig && reportConfig.email) {
-      return reportConfig.email;
+
+    if (reportConfig?.email?.trim()) {
+      const list = parseEmailList(reportConfig.email);
+      if (list.length > 0) return list;
     }
-    
-    // Fallback to environment variable
+
     const envEmail = process.env[`EMAIL_${reportId}`];
     if (envEmail) {
-      // Clean email (remove comments)
-      return envEmail.split('#')[0].trim();
+      const list = parseEmailList(envEmail);
+      if (list.length > 0) return list;
     }
-    
+
     return null;
   } catch (error) {
-    console.error('Error reading report email from database:', error);
-    
-    // Fallback to environment variable on error
+    console.error('Error reading report recipients from database:', error);
+
     const envEmail = process.env[`EMAIL_${reportId}`];
     if (envEmail) {
-      return envEmail.split('#')[0].trim();
+      const list = parseEmailList(envEmail);
+      if (list.length > 0) return list;
     }
     return null;
   }

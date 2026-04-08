@@ -240,8 +240,15 @@ export default function AdminPanel() {
           <h2 className="text-xl font-semibold text-gray-800 mb-4">
             Report Email Addresses
           </h2>
-          <p className="text-sm text-gray-600 mb-6">
-            Configure the email addresses where each report type should be sent.
+          <p className="text-sm text-gray-600 mb-2">
+            Enter one or more addresses per report, separated by commas, semicolons, or new lines.
+          </p>
+          <p className="text-sm text-blue-800 bg-blue-50 border border-blue-100 rounded-md p-3 mb-6">
+            Every submission is also sent as a blind copy (BCC) to{' '}
+            <strong>reports@floridasons.org</strong> (or{' '}
+            <code className="text-xs bg-white px-1 rounded">REPORTS_ARCHIVE_EMAIL</code> if set in
+            environment variables). That address does not need to be listed below unless you want
+            it in the primary To list as well.
           </p>
 
           {config && (
@@ -256,12 +263,13 @@ export default function AdminPanel() {
                       <p className="text-sm text-gray-600">{report.fullName}</p>
                     </div>
                   </div>
-                  <input
-                    type="email"
+                  <textarea
                     value={report.email}
                     onChange={(e) => handleEmailChange(id, e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Enter email address"
+                    rows={3}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
+                    placeholder="one@example.com, two@example.com"
+                    aria-label={`Email addresses for ${report.reportName}`}
                   />
                 </div>
               ))}

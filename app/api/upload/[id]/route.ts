@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sendEmail } from '@/app/services/emailService';
-import { getReportEmail } from '@/app/utils/reportConfig';
+import { getReportRecipients } from '@/app/utils/reportConfig';
 
 // Helper function to get report name from ID
 function getReportName(id: string): string {
@@ -65,17 +65,22 @@ export async function POST(
     const newFileName = `SQ${squadronNumber}-${reportName}.${fileExtension}`;
     const fileBuffer = await file.arrayBuffer();
 
-    // Prepare email data
-    const recipientEmail = await getReportEmail(params.id);
-    if (!recipientEmail) {
+    const recipients = await getReportRecipients(params.id);
+    if (!recipients?.length) {
       return NextResponse.json(
         { error: 'No recipient email configured for this report type' },
         { status: 500 }
       );
     }
 
+    const archiveRaw = (process.env.REPORTS_ARCHIVE_EMAIL || 'reports@floridasons.org').trim();
+    const recipientLower = new Set(recipients.map((e) => e.toLowerCase()));
+    const bccArchive =
+      archiveRaw && !recipientLower.has(archiveRaw.toLowerCase()) ? [archiveRaw] : [];
+
     const emailData = {
-      to: recipientEmail,
+      to: recipients,
+      ...(bccArchive.length ? { bcc: bccArchive } : {}),
       from: process.env.SMTP_FROM_EMAIL || 'noreply@floridasons.org',
       subject: `New ${reportName} Report Submission`,
       text: `
