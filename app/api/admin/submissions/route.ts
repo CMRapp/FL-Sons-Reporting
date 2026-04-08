@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/app/lib/prisma';
 import { verifyAdminAuth } from '@/app/lib/adminAuth';
-import { getSubmissionTrackingStartIso } from '@/app/lib/submissionTracking';
+import { getSubmissionTrackingStartResolved } from '@/app/lib/submissionTracking';
 import { isValidReportUploadId, REPORT_ORDER } from '@/app/lib/reports';
 
 export const runtime = 'nodejs';
@@ -29,17 +29,22 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const submissions = await prisma.reportSubmission.findMany({
-      where: reportId
-        ? { reportId }
-        : { reportId: { in: [...REPORT_ORDER] } },
-      orderBy: { createdAt: 'desc' },
-      take: limit,
-    });
+    const [submissions, tracking] = await Promise.all([
+      prisma.reportSubmission.findMany({
+        where: reportId
+          ? { reportId }
+          : { reportId: { in: [...REPORT_ORDER] } },
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+      }),
+      getSubmissionTrackingStartResolved(),
+    ]);
 
     return NextResponse.json({
       submissions,
-      trackingStartedAt: getSubmissionTrackingStartIso(),
+      trackingStartedAt: tracking.iso,
+      trackingSource: tracking.source,
+      trackingLockedByEnv: tracking.source === 'env',
     });
   } catch (error) {
     console.error('Error fetching submissions:', error);

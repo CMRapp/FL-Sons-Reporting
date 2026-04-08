@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { getServiceYear } from '@/app/utils/serviceYear';
 import { REPORT_ORDER, REPORT_METADATA, type ReportUploadId } from '@/app/lib/reports';
+import AdminDialog from '@/app/components/AdminDialog';
 
 interface ReportEmail {
   reportName: string;
@@ -101,7 +102,12 @@ export default function AdminPanel() {
   const [submissionsError, setSubmissionsError] = useState('');
   const [historyTabId, setHistoryTabId] = useState<ReportUploadId>('1');
   const [trackingStartedAt, setTrackingStartedAt] = useState<string | null>(null);
+  const [trackingLockedByEnv, setTrackingLockedByEnv] = useState(false);
   const [includeHistorySampleData, setIncludeHistorySampleData] = useState(false);
+  const [clearDialogOpen, setClearDialogOpen] = useState(false);
+  const [trackingDialogOpen, setTrackingDialogOpen] = useState(false);
+  const [trackingDateDraft, setTrackingDateDraft] = useState('');
+  const [dialogBusy, setDialogBusy] = useState(false);
   const serviceYear = getServiceYear();
 
   const fetchSubmissions = useCallback(async () => {
@@ -118,9 +124,11 @@ export default function AdminPanel() {
       const data = (await res.json()) as {
         submissions: SubmissionRecord[];
         trackingStartedAt?: string;
+        trackingLockedByEnv?: boolean;
       };
       setSubmissions(data.submissions ?? []);
       setTrackingStartedAt(data.trackingStartedAt ?? null);
+      setTrackingLockedByEnv(data.trackingLockedByEnv ?? false);
     } catch (e) {
       setSubmissionsError(e instanceof Error ? e.message : 'Failed to load submissions');
     } finally {
@@ -132,6 +140,89 @@ export default function AdminPanel() {
     if (!isAuthenticated || adminSection !== 'history' || !password) return;
     fetchSubmissions();
   }, [isAuthenticated, adminSection, password, fetchSubmissions]);
+
+  const handleClearAllSubmissions = useCallback(async () => {
+    if (!adminName.trim()) {
+      setMessage('Enter your name in the field at the top of the admin panel before continuing.');
+      setMessageType('error');
+      return;
+    }
+    setDialogBusy(true);
+    setMessage('');
+    try {
+      const res = await fetch('/api/admin/submissions/clear', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${password}`,
+        },
+        body: JSON.stringify({ performedBy: adminName.trim() }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        deletedCount?: number;
+        trackingSource?: string;
+      };
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to clear submissions');
+      }
+      setClearDialogOpen(false);
+      await fetchSubmissions();
+      let msg = `Permanently deleted ${data.deletedCount ?? 0} submission record(s). The stored tracking start date was set to today (UTC).`;
+      if (data.trackingSource === 'env') {
+        msg +=
+          ' The line shown as “Tracking since” still follows SUBMISSION_TRACKING_START in your environment until you remove that variable.';
+      }
+      setMessage(msg);
+      setMessageType('success');
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : 'Clear failed');
+      setMessageType('error');
+    } finally {
+      setDialogBusy(false);
+    }
+  }, [adminName, password, fetchSubmissions]);
+
+  const handleSaveTrackingDate = useCallback(async () => {
+    if (!adminName.trim()) {
+      setMessage('Enter your name in the field at the top of the admin panel before continuing.');
+      setMessageType('error');
+      return;
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(trackingDateDraft.trim())) {
+      setMessage('Choose a valid date.');
+      setMessageType('error');
+      return;
+    }
+    setDialogBusy(true);
+    setMessage('');
+    try {
+      const res = await fetch('/api/admin/submission-tracking', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${password}`,
+        },
+        body: JSON.stringify({
+          date: trackingDateDraft.trim(),
+          performedBy: adminName.trim(),
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to update tracking date');
+      }
+      setTrackingDialogOpen(false);
+      await fetchSubmissions();
+      setMessage('Tracking start date updated.');
+      setMessageType('success');
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : 'Update failed');
+      setMessageType('error');
+    } finally {
+      setDialogBusy(false);
+    }
+  }, [adminName, password, trackingDateDraft, fetchSubmissions]);
 
   const submissionsWithPreviewSamples = useMemo(() => {
     if (!includeHistorySampleData) return submissions;
@@ -256,6 +347,11 @@ export default function AdminPanel() {
     setSubmissionsError('');
     setHistoryTabId('1');
     setTrackingStartedAt(null);
+    setTrackingLockedByEnv(false);
+    setClearDialogOpen(false);
+    setTrackingDialogOpen(false);
+    setTrackingDateDraft('');
+    setDialogBusy(false);
   };
 
   if (!isAuthenticated) {
@@ -484,6 +580,12 @@ export default function AdminPanel() {
                         month: 'long',
                         day: 'numeric',
                       })}
+                      {trackingLockedByEnv && (
+                        <span className="text-amber-800" title="SUBMISSION_TRACKING_START is set">
+                          {' '}
+                          (env)
+                        </span>
+                      )}
                     </span>
                   )}
                 </div>
@@ -517,6 +619,47 @@ export default function AdminPanel() {
             <p id="history-sample-data-hint" className="sr-only">
               When enabled, adds six placeholder squadrons on every report tab for layout preview. Tab counts include these rows.
             </p>
+
+            <div className="mb-4 flex flex-col gap-3 rounded-xl border border-slate-200 bg-gradient-to-b from-slate-50 to-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-slate-600 max-w-xl">
+                Manage the submission log and the &quot;tracking since&quot; label. Clearing records cannot be undone.
+                {trackingLockedByEnv && (
+                  <span className="mt-1 block text-amber-900">
+                    Tracking date is locked by <code className="text-xs bg-amber-100 px-1 rounded">SUBMISSION_TRACKING_START</code> in the environment; remove it to use the button below.
+                  </span>
+                )}
+              </p>
+              <div className="flex flex-wrap gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const d = trackingStartedAt?.slice(0, 10);
+                    setTrackingDateDraft(
+                      d && /^\d{4}-\d{2}-\d{2}$/.test(d)
+                        ? d
+                        : new Date().toISOString().slice(0, 10)
+                    );
+                    setTrackingDialogOpen(true);
+                  }}
+                  disabled={trackingLockedByEnv}
+                  className="rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm font-medium text-blue-900 shadow-sm hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  title={
+                    trackingLockedByEnv
+                      ? 'Clear SUBMISSION_TRACKING_START in the environment first'
+                      : 'Change tracking start date without deleting records'
+                  }
+                >
+                  Set tracking date…
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setClearDialogOpen(true)}
+                  className="rounded-lg border border-red-300 bg-white px-3 py-2 text-sm font-medium text-red-800 shadow-sm hover:bg-red-50"
+                >
+                  Delete all records…
+                </button>
+              </div>
+            </div>
 
             {submissionsError && (
               <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md text-sm">{submissionsError}</div>
@@ -600,6 +743,62 @@ export default function AdminPanel() {
                 </div>
               )}
             </div>
+
+            <AdminDialog
+              open={clearDialogOpen}
+              onClose={() => !dialogBusy && setClearDialogOpen(false)}
+              title="Delete all submission records?"
+              description={
+                <>
+                  <p>
+                    This permanently removes every row in the submission log. Emails already sent are not affected,
+                    but{' '}
+                    <strong className="font-semibold text-red-800">recovery is not possible.</strong>
+                  </p>
+                  <p className="mt-3 text-slate-600">
+                    The stored tracking start date will be set to <strong>today (UTC)</strong>. If{' '}
+                    <code className="rounded bg-slate-100 px-1 text-xs">SUBMISSION_TRACKING_START</code> is set on
+                    the server, the banner will still use that value until you remove it.
+                  </p>
+                </>
+              }
+              primaryLabel="Delete everything"
+              primaryVariant="danger"
+              onPrimary={handleClearAllSubmissions}
+              isBusy={dialogBusy}
+            />
+
+            <AdminDialog
+              open={trackingDialogOpen}
+              onClose={() => !dialogBusy && setTrackingDialogOpen(false)}
+              title="Set submission tracking start date"
+              description={
+                <p>
+                  Submissions before this date are treated as outside the log for messaging only. Existing records are
+                  not removed.
+                </p>
+              }
+              primaryLabel="Save date"
+              onPrimary={handleSaveTrackingDate}
+              isBusy={dialogBusy}
+              primaryDisabled={!trackingDateDraft}
+            >
+              <div>
+                <label
+                  htmlFor="tracking-date-input"
+                  className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500"
+                >
+                  Tracking starts on
+                </label>
+                <input
+                  id="tracking-date-input"
+                  type="date"
+                  value={trackingDateDraft}
+                  onChange={(e) => setTrackingDateDraft(e.target.value)}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                />
+              </div>
+            </AdminDialog>
           </div>
         )}
       </div>
