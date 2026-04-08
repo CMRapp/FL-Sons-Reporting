@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sendEmail } from '@/app/services/emailService';
 import { getReportRecipients } from '@/app/utils/reportConfig';
+import { shouldBccArchiveCopy } from '@/app/utils/emailList';
 
 // Helper function to get report name from ID
 function getReportName(id: string): string {
@@ -74,9 +75,8 @@ export async function POST(
     }
 
     const archiveRaw = (process.env.REPORTS_ARCHIVE_EMAIL || 'reports@floridasons.org').trim();
-    const recipientLower = new Set(recipients.map((e) => e.toLowerCase()));
     const bccArchive =
-      archiveRaw && !recipientLower.has(archiveRaw.toLowerCase()) ? [archiveRaw] : [];
+      archiveRaw && shouldBccArchiveCopy(recipients, archiveRaw) ? [archiveRaw] : [];
 
     const emailData = {
       to: recipients,

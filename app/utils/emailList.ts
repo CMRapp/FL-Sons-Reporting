@@ -42,3 +42,19 @@ export function normalizeEmailListString(raw: string): string {
   }
   return out.join(', ');
 }
+
+/**
+ * When true, add archive address as BCC on submission emails.
+ * When false, archive is already in the To list — do not BCC (avoids duplicate delivery).
+ */
+export function shouldBccArchiveCopy(
+  recipients: string[],
+  archiveEmail: string
+): boolean {
+  const archive = archiveEmail.trim().toLowerCase();
+  if (!archive) return false;
+  const recipientSet = new Set(
+    recipients.map((e) => e.trim().toLowerCase()).filter(Boolean)
+  );
+  return !recipientSet.has(archive);
+}
