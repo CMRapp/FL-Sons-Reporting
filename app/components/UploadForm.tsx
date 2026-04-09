@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import Image from 'next/image';
 import Modal from './Modal';
 import JumpBar from './JumpBar';
@@ -43,6 +43,7 @@ const UploadForm = () => {
   const [currentReportName, setCurrentReportName] = useState('');
   const [focusedReport, setFocusedReport] = useState<string | null>(null);
   const [showDisclaimer, setShowDisclaimer] = useState(true);
+  const submittingRef = useRef<Set<number>>(new Set());
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -165,6 +166,11 @@ const UploadForm = () => {
       return;
     }
 
+    if (submittingRef.current.has(index)) {
+      return;
+    }
+    submittingRef.current.add(index);
+
     const formDataToSend = new FormData();
     const reportId = REPORT_ORDER[index];
     const reportName = REPORT_METADATA[reportId].code;
@@ -202,7 +208,12 @@ const UploadForm = () => {
       const responseText = await response.text();
       console.log('Raw response:', responseText);
 
-      let result;
+      let result: {
+        success?: boolean;
+        error?: string;
+        message?: string;
+        confirmationSent?: boolean;
+      };
       try {
         result = JSON.parse(responseText);
       } catch (parseError) {
@@ -216,8 +227,14 @@ const UploadForm = () => {
         throw new Error(result.error || result.message || 'Upload failed');
       }
 
-      // Show modal instead of alert
-      setModalMessage(`Thank you, ${formData.userName}, your ${reportName} has been submitted. You will receive a confirmation email shortly. Save this email for your records`);
+      const confirmNote =
+        result.confirmationSent === false
+          ? 'No separate confirmation email was sent because your address is on the distribution for this report.'
+          : 'You will receive a confirmation email shortly. Save this email for your records';
+
+      setModalMessage(
+        `Thank you, ${formData.userName}, your ${reportName} has been submitted. ${confirmNote}`
+      );
       setIsModalOpen(true);
       
       // Only clear the file input for this specific report
@@ -236,6 +253,8 @@ const UploadForm = () => {
         newStatus[index] = `Error: ${error instanceof Error ? error.message : 'Upload failed'}`;
         return newStatus;
       });
+    } finally {
+      submittingRef.current.delete(index);
     }
   };
 

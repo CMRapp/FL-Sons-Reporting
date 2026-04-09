@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sendEmail } from '@/app/services/emailService';
 import { getReportRecipients } from '@/app/utils/reportConfig';
-import { shouldBccArchiveCopy } from '@/app/utils/emailList';
+import { dedupeEmailList, shouldBccArchiveCopy } from '@/app/utils/emailList';
 import prisma from '@/app/lib/prisma';
 import {
   getReportCodeByUploadId,
@@ -60,13 +60,21 @@ export async function POST(
     const newFileName = `SQ${squadronNumber}-${reportName}.${fileExtension}`;
     const fileBuffer = await file.arrayBuffer();
 
-    const recipients = await getReportRecipients(params.id);
-    if (!recipients?.length) {
+    const rawRecipients = await getReportRecipients(params.id);
+    if (!rawRecipients?.length) {
       return NextResponse.json(
         { error: 'No recipient email configured for this report type' },
         { status: 500 }
       );
     }
+
+    const recipients = dedupeEmailList(rawRecipients);
+    const submitterEmailNorm = userEmail.trim().toLowerCase();
+    const recipientSet = new Set(recipients.map((e) => e.trim().toLowerCase()));
+    const alwaysSendConfirmation =
+      process.env.SKIP_CONFIRMATION_FOR_RECIPIENTS === 'false';
+    const sendConfirmation =
+      alwaysSendConfirmation || !recipientSet.has(submitterEmailNorm);
 
     const archiveRaw = (process.env.REPORTS_ARCHIVE_EMAIL || 'reports@floridasons.org').trim();
     const bccArchive =
@@ -166,9 +174,15 @@ Your report has been successfully submitted and will be processed.
       `
     };
 
-    await sendEmail(confirmationEmailData);
+    if (sendConfirmation) {
+      await sendEmail(confirmationEmailData);
+    }
 
-    return NextResponse.json({ success: true, fileName: newFileName });
+    return NextResponse.json({
+      success: true,
+      fileName: newFileName,
+      confirmationSent: sendConfirmation,
+    });
   } catch (error) {
     console.error('Upload error:', error);
     return NextResponse.json(

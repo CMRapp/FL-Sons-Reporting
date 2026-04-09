@@ -28,19 +28,26 @@ export function validateEmailList(raw: string): string | null {
 }
 
 /**
+ * Deduplicate addresses case-insensitively (first occurrence wins).
+ */
+export function dedupeEmailList(emails: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const e of emails) {
+    const key = e.trim().toLowerCase();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    out.push(e.trim());
+  }
+  return out;
+}
+
+/**
  * Deduplicate case-insensitively; returns stable comma-separated string for storage.
  */
 export function normalizeEmailListString(raw: string): string {
   const parts = parseEmailList(raw);
-  const seen = new Set<string>();
-  const out: string[] = [];
-  for (const e of parts) {
-    const key = e.toLowerCase();
-    if (seen.has(key)) continue;
-    seen.add(key);
-    out.push(e);
-  }
-  return out.join(', ');
+  return dedupeEmailList(parts).join(', ');
 }
 
 /**
