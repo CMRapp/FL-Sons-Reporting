@@ -5,6 +5,16 @@ All notable changes to the FL SAL Reporting Portal will be documented in this fi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.5] - 2026-04-09
+
+### Fixed
+- **Duplicate inbox messages** when a submitter’s address was already a report recipient (e.g. staff using `reports@floridasons.org`): skip the redundant confirmation for that case; dedupe `to` recipients from config/env. Set `SKIP_CONFIRMATION_FOR_RECIPIENTS=false` to always send confirmation anyway.
+- **“Invalid response from server”** on some uploads (often large PDFs or slow SMTP): return JSON immediately after the staff notification by sending the confirmation with Vercel **`waitUntil`** (`@vercel/functions`); **`maxDuration`** increased on the upload route; SMTP2GO responses read as **text** then parsed so empty or non-JSON bodies do not break the client; upload response includes **`confirmationSent`** for accurate success copy.
+
+### Changed
+- **File format disclaimer modal**: redundant **Close** control removed; **I Understand - Continue to Upload** is the only dismiss action (`Modal` supports optional `showCloseButton`).
+- **Upload form**: guard against double-submit per report while a request is in flight; strip UTF-8 **BOM** before parsing JSON; clearer error when the server returns HTML (e.g. gateway/timeout).
+
 ## [1.1.4] - 2026-04-08
 
 ### Removed
@@ -238,6 +248,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added validation for email recipients
 - Secured file upload process with type and size restrictions
 
+[1.1.5]: https://github.com/CMRapp/FL-Sons-Reporting/compare/v1.1.4...v1.1.5
 [1.1.4]: https://github.com/CMRapp/FL-Sons-Reporting/compare/v1.1.3...v1.1.4
 [1.1.3]: https://github.com/CMRapp/FL-Sons-Reporting/compare/v1.1.2...v1.1.3
 [1.1.2]: https://github.com/yourusername/reporting/compare/v1.1.1...v1.1.2
