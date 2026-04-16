@@ -205,7 +205,7 @@ const UploadForm = () => {
       });
 
       console.log('Response status:', response.status);
-      const responseText = await response.text();
+      const responseText = (await response.text()).replace(/^\uFEFF/, '').trim();
       console.log('Raw response:', responseText);
 
       let result: {
@@ -215,10 +215,14 @@ const UploadForm = () => {
         confirmationSent?: boolean;
       };
       try {
-        result = JSON.parse(responseText);
+        result = JSON.parse(responseText) as typeof result;
       } catch (parseError) {
         console.error('Error parsing response:', parseError);
-        throw new Error('Invalid response from server');
+        const hint =
+          responseText.startsWith('<') || responseText.startsWith('<!')
+            ? 'The server returned a web page instead of JSON (often a timeout or gateway error). Try a smaller PDF or try again.'
+            : 'The server response was not valid JSON.';
+        throw new Error(`${hint} (HTTP ${response.status})`);
       }
 
       console.log('Parsed response:', result);

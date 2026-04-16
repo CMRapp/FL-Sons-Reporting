@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { waitUntil } from '@vercel/functions';
 import { sendEmail } from '@/app/services/emailService';
 import { getReportRecipients } from '@/app/utils/reportConfig';
 import { dedupeEmailList, shouldBccArchiveCopy } from '@/app/utils/emailList';
@@ -11,13 +12,16 @@ import {
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+/** Allow large PDFs + two SMTP round-trips on Vercel (platform may clamp by plan). */
+export const maxDuration = 60;
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: { id: string | string[] } }
 ): Promise<NextResponse> {
   try {
-    if (!isValidReportUploadId(params.id)) {
+    const reportId = Array.isArray(params.id) ? params.id[0] : params.id;
+    if (!reportId || !isValidReportUploadId(reportId)) {
       return NextResponse.json({ error: 'Invalid report type' }, { status: 404 });
     }
 
@@ -55,12 +59,12 @@ export async function POST(
     }
 
     // Create new filename - Format: SQ[squadron]-[reportName]
-    const reportName = getReportCodeByUploadId(params.id);
-    const reportFullName = getReportLabelByUploadId(params.id);
+    const reportName = getReportCodeByUploadId(reportId);
+    const reportFullName = getReportLabelByUploadId(reportId);
     const newFileName = `SQ${squadronNumber}-${reportName}.${fileExtension}`;
     const fileBuffer = await file.arrayBuffer();
 
-    const rawRecipients = await getReportRecipients(params.id);
+    const rawRecipients = await getReportRecipients(reportId);
     if (!rawRecipients?.length) {
       return NextResponse.json(
         { error: 'No recipient email configured for this report type' },
@@ -128,7 +132,7 @@ File: ${newFileName}
     try {
       await prisma.reportSubmission.create({
         data: {
-          reportId: params.id,
+          reportId,
           reportName,
           fullName: reportFullName,
           userName,
@@ -175,7 +179,16 @@ Your report has been successfully submitted and will be processed.
     };
 
     if (sendConfirmation) {
-      await sendEmail(confirmationEmailData);
+      const confirmationWork = sendEmail(confirmationEmailData).then((r) => {
+        if (!r.success) {
+          console.error('Confirmation email failed:', r.error);
+        }
+      });
+      if (process.env.VERCEL) {
+        waitUntil(confirmationWork);
+      } else {
+        await confirmationWork;
+      }
     }
 
     return NextResponse.json({

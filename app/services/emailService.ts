@@ -167,17 +167,29 @@ export async function sendEmail(data: EmailData): Promise<EmailResponse> {
       body: JSON.stringify(requestData)
     });
 
+    const raw = await response.text();
+
     if (!response.ok) {
-      const errorData = await response.json();
-      console.error('SMTP2GO API error:', errorData);
-    return {
-        success: false, 
-        error: errorData.data?.error || 'Failed to send email' 
-      };
+      let errorMessage = 'Failed to send email';
+      try {
+        const errorData = raw ? JSON.parse(raw) : {};
+        console.error('SMTP2GO API error:', errorData);
+        errorMessage =
+          (errorData as { data?: { error?: string } }).data?.error || errorMessage;
+      } catch {
+        console.error('SMTP2GO API error (non-JSON body):', raw.slice(0, 500));
+        errorMessage = raw.trim().slice(0, 200) || errorMessage;
+      }
+      return { success: false, error: errorMessage };
     }
 
-    const responseData = await response.json();
-    console.log('Email sent successfully:', responseData);
+    if (raw.trim()) {
+      try {
+        console.log('Email sent successfully:', JSON.parse(raw));
+      } catch {
+        console.log('Email sent (unparseable success body):', raw.slice(0, 200));
+      }
+    }
 
     return { success: true };
   } catch (error) {
