@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { waitUntil } from '@vercel/functions';
 import { sendEmail } from '@/app/services/emailService';
 import { getReportRecipients } from '@/app/utils/reportConfig';
-import { dedupeEmailList, shouldBccArchiveCopy } from '@/app/utils/emailList';
+import { buildArchiveBccList, dedupeEmailList } from '@/app/utils/emailList';
 import prisma from '@/app/lib/prisma';
 import {
   getReportCodeByUploadId,
@@ -80,9 +80,10 @@ export async function POST(
     const sendConfirmation =
       alwaysSendConfirmation || !recipientSet.has(submitterEmailNorm);
 
-    const archiveRaw = (process.env.REPORTS_ARCHIVE_EMAIL || 'reports@floridasons.org').trim();
-    const bccArchive =
-      archiveRaw && shouldBccArchiveCopy(recipients, archiveRaw) ? [archiveRaw] : [];
+    const bccArchive = buildArchiveBccList(
+      recipients,
+      process.env.REPORTS_ARCHIVE_EMAIL
+    );
 
     const emailData = {
       to: recipients,

@@ -5,6 +5,11 @@ All notable changes to the FL SAL Reporting Portal will be documented in this fi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.6] - 2026-04-09
+
+### Fixed
+- **Duplicate copies to `reports@floridasons.org`** when `REPORTS_ARCHIVE_EMAIL` is a comma-separated list that includes the same address as a primary `to` recipient: archive addresses are parsed per-address and only BCC’d if not already in `to`. `sendEmail` also strips any `bcc` entry that duplicates `to` and dedupes BCC.
+
 ## [1.1.5] - 2026-04-09
 
 ### Fixed
@@ -248,6 +253,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added validation for email recipients
 - Secured file upload process with type and size restrictions
 
+[1.1.6]: https://github.com/CMRapp/FL-Sons-Reporting/compare/v1.1.5...v1.1.6
 [1.1.5]: https://github.com/CMRapp/FL-Sons-Reporting/compare/v1.1.4...v1.1.5
 [1.1.4]: https://github.com/CMRapp/FL-Sons-Reporting/compare/v1.1.3...v1.1.4
 [1.1.3]: https://github.com/CMRapp/FL-Sons-Reporting/compare/v1.1.2...v1.1.3

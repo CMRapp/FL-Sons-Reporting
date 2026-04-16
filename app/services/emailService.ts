@@ -133,7 +133,16 @@ export async function sendEmail(data: EmailData): Promise<EmailResponse> {
     }
 
     const toList = asEmailArray(data.to);
-    const bccList = data.bcc ? asEmailArray(data.bcc) : [];
+    let bccList = data.bcc ? asEmailArray(data.bcc) : [];
+    const toSet = new Set(toList.map((t) => t.trim().toLowerCase()).filter(Boolean));
+    bccList = bccList.filter((b) => !toSet.has(b.trim().toLowerCase()));
+    const bccSeen = new Set<string>();
+    bccList = bccList.filter((b) => {
+      const k = b.trim().toLowerCase();
+      if (!k || bccSeen.has(k)) return false;
+      bccSeen.add(k);
+      return true;
+    });
 
     const requestData = {
       api_key: process.env.SMTP2GO_API_KEY,

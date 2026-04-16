@@ -51,17 +51,25 @@ export function normalizeEmailListString(raw: string): string {
 }
 
 /**
- * When true, add archive address as BCC on submission emails.
- * When false, archive is already in the To list — do not BCC (avoids duplicate delivery).
+ * Build BCC list for archive copies: parse `REPORTS_ARCHIVE_EMAIL` (comma/semicolon/newline),
+ * drop any address already in `to` (case-insensitive), dedupe.
+ * Prevents duplicate delivery when the archive env is a list that repeats a primary recipient
+ * (e.g. `reports@floridasons.org, backup@…` while `reports@` is already in To).
  */
-export function shouldBccArchiveCopy(
+export function buildArchiveBccList(
   recipients: string[],
-  archiveEmail: string
-): boolean {
-  const archive = archiveEmail.trim().toLowerCase();
-  if (!archive) return false;
+  archiveEnv: string | undefined,
+  defaultArchive = 'reports@floridasons.org'
+): string[] {
+  const raw = (archiveEnv ?? '').trim() || defaultArchive;
+  let candidates = dedupeEmailList(parseEmailList(raw));
+  if (candidates.length === 0) {
+    candidates = [defaultArchive];
+  }
   const recipientSet = new Set(
     recipients.map((e) => e.trim().toLowerCase()).filter(Boolean)
   );
-  return !recipientSet.has(archive);
+  return dedupeEmailList(
+    candidates.filter((e) => !recipientSet.has(e.trim().toLowerCase()))
+  );
 }
