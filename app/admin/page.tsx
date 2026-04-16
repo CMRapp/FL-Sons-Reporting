@@ -90,6 +90,11 @@ function buildSampleSubmissions(): SubmissionRecord[] {
 export default function AdminPanel() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState('');
+  /** Match server `verifyAdminAuth` normalization (trim / BOM) for Bearer token. */
+  const adminSecret = useMemo(
+    () => password.replace(/^\uFEFF/, '').trim(),
+    [password]
+  );
   const [showPassword, setShowPassword] = useState(false);
   const [config, setConfig] = useState<ReportConfig | null>(null);
   const [loading, setLoading] = useState(false);
@@ -115,7 +120,7 @@ export default function AdminPanel() {
     setSubmissionsError('');
     try {
       const res = await fetch('/api/admin/submissions?limit=2000', {
-        headers: { Authorization: `Bearer ${password}` },
+        headers: { Authorization: `Bearer ${adminSecret}` },
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -134,12 +139,12 @@ export default function AdminPanel() {
     } finally {
       setSubmissionsLoading(false);
     }
-  }, [password]);
+  }, [adminSecret]);
 
   useEffect(() => {
-    if (!isAuthenticated || adminSection !== 'history' || !password) return;
+    if (!isAuthenticated || adminSection !== 'history' || !adminSecret) return;
     fetchSubmissions();
-  }, [isAuthenticated, adminSection, password, fetchSubmissions]);
+  }, [isAuthenticated, adminSection, adminSecret, fetchSubmissions]);
 
   const handleClearAllSubmissions = useCallback(async () => {
     if (!adminName.trim()) {
@@ -154,7 +159,7 @@ export default function AdminPanel() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${password}`,
+          Authorization: `Bearer ${adminSecret}`,
         },
         body: JSON.stringify({ performedBy: adminName.trim() }),
       });
@@ -181,7 +186,7 @@ export default function AdminPanel() {
     } finally {
       setDialogBusy(false);
     }
-  }, [adminName, password, fetchSubmissions]);
+  }, [adminName, adminSecret, fetchSubmissions]);
 
   const handleSaveTrackingDate = useCallback(async () => {
     if (!adminName.trim()) {
@@ -201,7 +206,7 @@ export default function AdminPanel() {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${password}`,
+          Authorization: `Bearer ${adminSecret}`,
         },
         body: JSON.stringify({
           date: trackingDateDraft.trim(),
@@ -222,7 +227,7 @@ export default function AdminPanel() {
     } finally {
       setDialogBusy(false);
     }
-  }, [adminName, password, trackingDateDraft, fetchSubmissions]);
+  }, [adminName, adminSecret, trackingDateDraft, fetchSubmissions]);
 
   const submissionsWithPreviewSamples = useMemo(() => {
     if (!includeHistorySampleData) return submissions;
@@ -253,7 +258,7 @@ export default function AdminPanel() {
     try {
       const response = await fetch('/api/admin/config', {
         headers: {
-          'Authorization': `Bearer ${password}`
+          'Authorization': `Bearer ${adminSecret}`
         }
       });
 
@@ -310,7 +315,7 @@ export default function AdminPanel() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${password}`
+          'Authorization': `Bearer ${adminSecret}`
         },
         body: JSON.stringify({
           reportEmails: config.reportEmails,
