@@ -194,7 +194,39 @@ export async function sendEmail(data: EmailData): Promise<EmailResponse> {
 
     if (raw.trim()) {
       try {
-        console.log('Email sent successfully:', JSON.parse(raw));
+        const parsed = JSON.parse(raw) as {
+          data?: {
+            succeeded?: number;
+            failed?: number;
+            failures?: Array<{ address?: string; error?: string }>;
+            error?: string;
+          };
+          error?: string;
+        };
+        const d = parsed.data;
+        const topError = parsed.error || d?.error;
+        if (topError) {
+          console.error('SMTP2GO response error:', topError, parsed);
+          return { success: false, error: String(topError) };
+        }
+        if (d && typeof d.succeeded === 'number' && d.succeeded === 0) {
+          console.error('SMTP2GO succeeded=0:', parsed);
+          return {
+            success: false,
+            error: 'SMTP2GO reported no successful deliveries for this message.',
+          };
+        }
+        if (d && typeof d.failed === 'number' && d.failed > 0) {
+          const detail =
+            Array.isArray(d.failures) && d.failures.length > 0
+              ? d.failures
+                  .map((f) => `${f.address ?? '?'}: ${f.error ?? 'rejected'}`)
+                  .join('; ')
+              : `${d.failed} recipient(s) failed`;
+          console.error('SMTP2GO recipient failure:', detail, parsed);
+          return { success: false, error: `Email not accepted for all recipients: ${detail}` };
+        }
+        console.log('Email sent successfully:', parsed);
       } catch {
         console.log('Email sent (unparseable success body):', raw.slice(0, 200));
       }
