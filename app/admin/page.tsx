@@ -514,14 +514,10 @@ export default function AdminPanel() {
         {adminSection === 'emails' && (
           <div className="bg-white rounded-lg shadow-md p-6">
             <h2 className="text-xl font-semibold text-gray-800 mb-4">Report Email Addresses</h2>
-            <p className="text-sm text-gray-600 mb-2">
+            <p className="text-sm text-gray-600 mb-6">
               Enter one or more addresses per report, separated by commas, semicolons, or new lines.
-            </p>
-            <p className="text-sm text-blue-800 bg-blue-50 border border-blue-100 rounded-md p-3 mb-6">
-              Every submission is also BCC&apos;d to{' '}
-              <strong>reports@floridasons.org</strong> (or{' '}
-              <code className="text-xs bg-white px-1 rounded">REPORTS_ARCHIVE_EMAIL</code> when set),
-              unless that address is already one of the recipients above — then no extra BCC is sent.
+              Each submission is emailed only to the addresses listed here (use your host&apos;s
+              forwarders if you need copies elsewhere).
             </p>
 
             {config && (

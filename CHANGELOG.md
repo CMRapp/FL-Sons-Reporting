@@ -5,6 +5,14 @@ All notable changes to the FL SAL Reporting Portal will be documented in this fi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.7] - 2026-04-09
+
+### Removed
+- **Archive BCC** on submission emails (`reports@floridasons.org` / `REPORTS_ARCHIVE_EMAIL`). Delivery is only to the addresses configured per report; use mail-host forwarders for extra copies.
+
+### Changed
+- Admin **Report email addresses** help text no longer describes BCC; it notes that only listed recipients receive the message.
+
 ## [1.1.6] - 2026-04-09
 
 ### Fixed
@@ -253,6 +261,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added validation for email recipients
 - Secured file upload process with type and size restrictions
 
+[1.1.7]: https://github.com/CMRapp/FL-Sons-Reporting/compare/v1.1.6...v1.1.7
 [1.1.6]: https://github.com/CMRapp/FL-Sons-Reporting/compare/v1.1.5...v1.1.6
 [1.1.5]: https://github.com/CMRapp/FL-Sons-Reporting/compare/v1.1.4...v1.1.5
 [1.1.4]: https://github.com/CMRapp/FL-Sons-Reporting/compare/v1.1.3...v1.1.4
