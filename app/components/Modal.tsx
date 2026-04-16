@@ -5,9 +5,17 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
+  /** When false, omit the footer Close button (e.g. when children provide their own dismiss action). */
+  showCloseButton?: boolean;
 }
 
-const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
+const Modal: React.FC<ModalProps> = ({
+  isOpen,
+  onClose,
+  title,
+  children,
+  showCloseButton = true,
+}) => {
   if (!isOpen) return null;
 
   return (
@@ -18,12 +26,14 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
         </div>
         <div className="p-6 text-center">
           {children}
-          <button
-            onClick={onClose}
-            className="mt-4 bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-          >
-            Close
-          </button>
+          {showCloseButton ? (
+            <button
+              onClick={onClose}
+              className="mt-4 bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            >
+              Close
+            </button>
+          ) : null}
         </div>
       </div>
     </div>

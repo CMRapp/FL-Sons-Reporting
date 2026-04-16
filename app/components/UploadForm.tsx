@@ -283,6 +283,7 @@ const UploadForm = () => {
         isOpen={showDisclaimer}
         onClose={() => setShowDisclaimer(false)}
         title="⚠️ Important: File Format Requirements"
+        showCloseButton={false}
       >
         <div className="space-y-4">
           <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
