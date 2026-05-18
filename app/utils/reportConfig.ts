@@ -1,6 +1,6 @@
 import prisma from '@/app/lib/prisma';
 import { REPORT_ORDER } from '@/app/lib/reports';
-import { parseEmailList } from '@/app/utils/emailList';
+import { emailsFromRecipientField } from '@/app/utils/emailList';
 
 /**
  * Recipient list for a report type (comma/semicolon/newline in DB or env).
@@ -13,13 +13,13 @@ export async function getReportRecipients(reportId: string): Promise<string[] | 
     });
 
     if (reportConfig?.email?.trim()) {
-      const list = parseEmailList(reportConfig.email);
+      const list = emailsFromRecipientField(reportConfig.email);
       if (list.length > 0) return list;
     }
 
     const envEmail = process.env[`EMAIL_${reportId}`];
     if (envEmail) {
-      const list = parseEmailList(envEmail);
+      const list = emailsFromRecipientField(envEmail);
       if (list.length > 0) return list;
     }
 
@@ -29,7 +29,7 @@ export async function getReportRecipients(reportId: string): Promise<string[] | 
 
     const envEmail = process.env[`EMAIL_${reportId}`];
     if (envEmail) {
-      const list = parseEmailList(envEmail);
+      const list = emailsFromRecipientField(envEmail);
       if (list.length > 0) return list;
     }
     return null;

@@ -5,6 +5,11 @@ All notable changes to the FL SAL Reporting Portal will be documented in this fi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.9] - 2026-04-09
+
+### Fixed
+- **“No recipient email configured for this report type”** despite valid settings: recipients separated by **tab, pipe, or CR** are recognized; when structured parsing yields nothing but the string contains `@`, **fallback extraction** finds valid addresses. Admin **`normalize`** uses the same path so saves can rewrite messy pasted values into a comma list.
+
 ## [1.1.8] - 2026-04-09
 
 ### Fixed
@@ -270,6 +275,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added validation for email recipients
 - Secured file upload process with type and size restrictions
 
+[1.1.9]: https://github.com/CMRapp/FL-Sons-Reporting/compare/v1.1.8...v1.1.9
 [1.1.8]: https://github.com/CMRapp/FL-Sons-Reporting/compare/v1.1.7...v1.1.8
 [1.1.7]: https://github.com/CMRapp/FL-Sons-Reporting/compare/v1.1.6...v1.1.7
 [1.1.6]: https://github.com/CMRapp/FL-Sons-Reporting/compare/v1.1.5...v1.1.6

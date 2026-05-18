@@ -17,14 +17,36 @@ function normalizeEmailSegment(segment: string): string {
 }
 
 /**
- * Split a string into individual addresses (comma, semicolon, or newline).
+ * Split a string into individual addresses (comma, semicolon, newline, tab, CR, pipe).
  */
 export function parseEmailList(raw: string): string[] {
   if (!raw?.trim()) return [];
   return raw
-    .split(/[,;\n]+/)
+    .split(/[,;\n\r\t|]+/)
     .map((chunk) => normalizeEmailSegment(chunk))
     .filter(Boolean);
+}
+
+/**
+ * Recipients for uploads and admin storage: parse with common separators first; if the
+ * field clearly contains @ but structured parse yields nothing (unusual separators,
+ * copy/paste glitches), extract likely addresses and validate.
+ */
+export function emailsFromRecipientField(raw: string): string[] {
+  const trimmed = raw?.trim() ?? '';
+  if (!trimmed) return [];
+
+  const structured = dedupeEmailList(parseEmailList(trimmed));
+  if (structured.length > 0) return structured;
+  if (!trimmed.includes('@')) return [];
+
+  const candidates = trimmed.match(/[^\s,<>"']+@[^\s,<>"']+/g) ?? [];
+  const valid: string[] = [];
+  for (const c of candidates) {
+    const n = normalizeEmailSegment(c);
+    if (n && isValidEmail(n)) valid.push(n);
+  }
+  return dedupeEmailList(valid);
 }
 
 export function isValidEmail(email: string): boolean {
@@ -35,7 +57,7 @@ export function isValidEmail(email: string): boolean {
  * Validate every address in a list; returns error message or null.
  */
 export function validateEmailList(raw: string): string | null {
-  const parts = parseEmailList(raw);
+  const parts = emailsFromRecipientField(raw);
   if (parts.length === 0) return 'At least one email address is required';
   for (const e of parts) {
     if (!isValidEmail(e)) return `Invalid email: ${e}`;
@@ -62,6 +84,5 @@ export function dedupeEmailList(emails: string[]): string[] {
  * Deduplicate case-insensitively; returns stable comma-separated string for storage.
  */
 export function normalizeEmailListString(raw: string): string {
-  const parts = parseEmailList(raw);
-  return dedupeEmailList(parts).join(', ');
+  return emailsFromRecipientField(raw).join(', ');
 }
