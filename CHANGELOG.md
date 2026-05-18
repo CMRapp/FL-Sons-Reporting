@@ -5,6 +5,15 @@ All notable changes to the FL SAL Reporting Portal will be documented in this fi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.8] - 2026-04-09
+
+### Fixed
+- **Admin save / email validation**: Addresses pasted as `Name <you@domain.com>` or `mailto:you@domain.com` are parsed correctly instead of failing validation.
+- After a successful save, **reload config from the API** so the UI shows normalized addresses from the database.
+
+### Changed
+- **Save Configuration** tooltip when disabled reminds you to enter **Your Name** (required for the audit trail).
+
 ## [1.1.7] - 2026-04-09
 
 ### Removed
@@ -261,6 +270,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added validation for email recipients
 - Secured file upload process with type and size restrictions
 
+[1.1.8]: https://github.com/CMRapp/FL-Sons-Reporting/compare/v1.1.7...v1.1.8
 [1.1.7]: https://github.com/CMRapp/FL-Sons-Reporting/compare/v1.1.6...v1.1.7
 [1.1.6]: https://github.com/CMRapp/FL-Sons-Reporting/compare/v1.1.5...v1.1.6
 [1.1.5]: https://github.com/CMRapp/FL-Sons-Reporting/compare/v1.1.4...v1.1.5

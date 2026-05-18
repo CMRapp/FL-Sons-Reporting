@@ -324,8 +324,19 @@ export default function AdminPanel() {
       });
 
       if (response.ok) {
-        const data = await response.json();
-        setConfig(data.config);
+        await response.json();
+        try {
+          const getRes = await fetch('/api/admin/config', {
+            headers: {
+              Authorization: `Bearer ${adminSecret}`,
+            },
+          });
+          if (getRes.ok) {
+            setConfig(await getRes.json());
+          }
+        } catch {
+          /* keep existing config if reload fails */
+        }
         setMessage('Configuration saved successfully!');
         setMessageType('success');
       } else {
@@ -554,8 +565,15 @@ export default function AdminPanel() {
               <button
                 type="button"
                 onClick={handleSave}
-                disabled={loading || !adminName.trim()}
-                className="bg-blue-600 text-white py-2 px-6 rounded-md hover:bg-blue-700 disabled:bg-gray-400 transition-colors"
+                disabled={loading || !adminName.trim() || !config}
+                title={
+                  !adminName.trim()
+                    ? 'Enter your name in the audit field above to save.'
+                    : !config
+                      ? 'Loading configuration…'
+                      : undefined
+                }
+                className="bg-blue-600 text-white py-2 px-6 rounded-md hover:bg-blue-700 disabled:bg-gray-400 transition-colors disabled:cursor-not-allowed"
               >
                 {loading ? 'Saving...' : 'Save Configuration'}
               </button>

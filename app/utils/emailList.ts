@@ -1,13 +1,29 @@
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
+ * One segment after comma/semicolon split: strip # comments, mailto:, and
+ * RFC-style `Name <address>` so validation matches how people paste addresses.
+ */
+function normalizeEmailSegment(segment: string): string {
+  let s = segment.split('#')[0];
+  if (!s) return '';
+  s = s.trim().replace(/^mailto:/i, '').trim();
+  const open = s.lastIndexOf('<');
+  const close = s.lastIndexOf('>');
+  if (open !== -1 && close > open && s.slice(open + 1, close).includes('@')) {
+    s = s.slice(open + 1, close).trim();
+  }
+  return s.trim();
+}
+
+/**
  * Split a string into individual addresses (comma, semicolon, or newline).
  */
 export function parseEmailList(raw: string): string[] {
   if (!raw?.trim()) return [];
   return raw
     .split(/[,;\n]+/)
-    .map((s) => s.split('#')[0].trim())
+    .map((chunk) => normalizeEmailSegment(chunk))
     .filter(Boolean);
 }
 
