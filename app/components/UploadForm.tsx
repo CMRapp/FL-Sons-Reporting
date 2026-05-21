@@ -335,9 +335,9 @@ const UploadForm = () => {
         <p className="text-center text-black text-xl italic font-bold  mb-8">Send any issues or questions to <a href="mailto:adjutant@floridasons.org" className="text-blue-500">adjutant@floridasons.org</a></p>
         {/* User Information Form */}
         <div className="bg-white shadow-md rounded-lg p-6 mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div>
-              <label htmlFor="userName" className="block text-sm font-medium text-black uppercase">Name</label>
+          <div className="flex flex-nowrap gap-3 items-end overflow-x-auto">
+            <div className="flex-1 min-w-[7rem]">
+              <label htmlFor="userName" className="block text-xs font-medium text-black uppercase">Name</label>
               <input
                 id="userName"
                 type="text"
@@ -351,8 +351,8 @@ const UploadForm = () => {
                 aria-label="Your name"
               />
             </div>
-            <div>
-              <label htmlFor="userEmail" className="block text-sm font-medium text-black uppercase">Email</label>
+            <div className="flex-[1.25] min-w-[9rem]">
+              <label htmlFor="userEmail" className="block text-xs font-medium text-black uppercase">Email</label>
               <input
                 id="userEmail"
                 type="email"
@@ -366,8 +366,8 @@ const UploadForm = () => {
                 aria-label="Your email"
               />
             </div>
-            <div>
-              <label htmlFor="userTitle" className="block text-sm font-medium text-black uppercase">Title</label>
+            <div className="flex-1 min-w-[7rem]">
+              <label htmlFor="userTitle" className="block text-xs font-medium text-black uppercase">Title</label>
               <input
                 id="userTitle"
                 type="text"
@@ -381,8 +381,8 @@ const UploadForm = () => {
                 aria-label="Your title"
               />
             </div>
-            <div>
-              <label htmlFor="squadronNumber" className="block text-sm font-medium text-black uppercase">Squadron Number</label>
+            <div className="flex-[0.85] min-w-[6rem]">
+              <label htmlFor="squadronNumber" className="block text-xs font-medium text-black uppercase whitespace-nowrap">Squadron #</label>
               <input
                 id="squadronNumber"
                 type="text"
@@ -396,8 +396,8 @@ const UploadForm = () => {
                 aria-label="Squadron number"
               />
             </div>
-            <div>
-              <label htmlFor="districtNumber" className="block text-sm font-medium text-black uppercase">District Number</label>
+            <div className="flex-[0.85] min-w-[6.5rem]">
+              <label htmlFor="districtNumber" className="block text-xs font-medium text-black uppercase whitespace-nowrap">District #</label>
               <select
                 id="districtNumber"
                 name="districtNumber"

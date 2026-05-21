@@ -3,6 +3,7 @@ import prisma from '@/app/lib/prisma';
 import { verifyAdminAuth } from '@/app/lib/adminAuth';
 import { normalizeEmailListString, validateEmailList } from '@/app/utils/emailList';
 import { REPORT_ORDER } from '@/app/lib/reports';
+import { getFullReportEmailConfig } from '@/app/utils/reportConfig';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -18,25 +19,14 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const reportEmails = await prisma.reportEmail.findMany({
-      where: { reportId: { in: [...REPORT_ORDER] } },
-      orderBy: { reportId: 'asc' },
-    });
+    const reportEmails = await getFullReportEmailConfig();
 
     const metadata = await prisma.configMetadata.findUnique({
       where: { key: 'last_updated' },
     });
 
-    // Transform to match expected format
     const config = {
-      reportEmails: reportEmails.reduce((acc, report) => {
-        acc[report.reportId] = {
-          reportName: report.reportName,
-          fullName: report.fullName,
-          email: report.email,
-        };
-        return acc;
-      }, {} as Record<string, { reportName: string; fullName: string; email: string }>),
+      reportEmails,
       lastUpdated: metadata?.value || '',
       updatedBy: metadata?.updatedBy || '',
     };

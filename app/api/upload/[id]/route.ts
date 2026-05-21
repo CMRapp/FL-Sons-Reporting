@@ -66,8 +66,14 @@ export async function POST(
 
     const rawRecipients = await getReportRecipients(reportId);
     if (!rawRecipients?.length) {
+      console.error(
+        `No recipients for report ${reportId} (${reportFullName}); check admin settings and EMAIL_${reportId}`
+      );
       return NextResponse.json(
-        { error: 'No recipient email configured for this report type' },
+        {
+          error: `No recipient email configured for ${reportFullName}. Please contact the detachment office.`,
+          reportId,
+        },
         { status: 500 }
       );
     }
