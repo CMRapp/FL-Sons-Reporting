@@ -54,11 +54,20 @@ EMAIL_1=recipient1@example.com
 EMAIL_2=recipient2@example.com
 # ... Add more email variables as needed
 
-# Squadron → district lookup (same Postgres as detachment-florida roster)
+# Squadron → district lookup + admin reporting sync (detachment-florida Postgres)
 DETACHMENT_DATABASE_URL=postgresql://...
+
+# User id for report_status.last_updated_by (optional if email resolves)
+# DETACHMENT_REPORTING_USER_ID=1
+# DETACHMENT_REPORTING_USER_EMAIL=reports@floridasons.org
 ```
 
-When `DETACHMENT_DATABASE_URL` is set, entering a squadron number auto-fills district from the detachment `squadron` table (same logic as portrait-awards). Copy the connection string from the **detachment-florida** project (`DATABASE_URL` / `POSTGRES_URL` on Vercel). If unset, members pick district manually.
+When `DETACHMENT_DATABASE_URL` is set:
+
+- Squadron number auto-fills **district** from the detachment `squadron` table.
+- Successful uploads mark the report **Complete** on detachment **Admin → Reporting** (`report_status` + `squadron_reports`), except **SDR** (not in that dashboard).
+
+Copy `DATABASE_URL` / `POSTGRES_URL` from the **detachment-florida** Vercel project. For `last_updated_by`, set `DETACHMENT_REPORTING_USER_ID` or `DETACHMENT_REPORTING_USER_EMAIL` (defaults to `reports@floridasons.org`, then first admin user).
 
 ## Development
 

@@ -4,10 +4,12 @@ import { sendEmail } from '@/app/services/emailService';
 import { getReportRecipients } from '@/app/utils/reportConfig';
 import { dedupeEmailList } from '@/app/utils/emailList';
 import prisma from '@/app/lib/prisma';
+import { syncDetachmentReportSubmission } from '@/app/lib/detachmentReportSync';
 import {
   getReportCodeByUploadId,
   getReportLabelByUploadId,
   isValidReportUploadId,
+  type ReportUploadId,
 } from '@/app/lib/reports';
 import { lookupSquadronDistrict } from '@/app/lib/squadronDistrict';
 import {
@@ -163,6 +165,21 @@ File: ${newFileName}
       );
     }
 
+    const detachmentSync = await syncDetachmentReportSubmission({
+      reportUploadId: reportId as ReportUploadId,
+      reportCode: reportName,
+      reportLabel: reportFullName,
+      sqNumber: squadronLookup.sq_number,
+      submitterName: userName,
+      submitterEmail: userEmail,
+      submitterTitle: userTitle,
+      districtNumber: districtDigits,
+      fileName: newFileName,
+    });
+    if (!detachmentSync.synced && detachmentSync.reason !== 'unmapped_type') {
+      console.error('Detachment reporting dashboard sync:', detachmentSync);
+    }
+
     const submitterIp =
       request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
       request.headers.get('x-real-ip') ||
@@ -234,6 +251,7 @@ Your report has been successfully submitted and will be processed.
       success: true,
       fileName: newFileName,
       confirmationSent: sendConfirmation,
+      detachmentDashboardSynced: detachmentSync.synced,
     });
   } catch (error) {
     console.error('Upload error:', error);

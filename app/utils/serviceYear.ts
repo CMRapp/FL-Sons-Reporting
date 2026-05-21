@@ -11,6 +11,16 @@
  * // If current date is July 1, 2024
  * getServiceYear() // Returns "2024-2025"
  */
+/**
+ * Report year stored in detachment DB (July 1 service-year start), e.g. 2025 for 2025-2026.
+ */
+export function getCurrentReportYear(): number {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1;
+  return month >= 7 ? year : year - 1;
+}
+
 export function getServiceYear(): string {
   const now = new Date();
   const currentYear = now.getFullYear();

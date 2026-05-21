@@ -1,4 +1,4 @@
-// Read-only client for Florida Detachment portal squadron roster (district lookup).
+// Detachment of Florida DB (read/write for roster + reporting status).
 // Set DETACHMENT_DATABASE_URL to the same Postgres URL as detachment-florida.
 
 generator client {
@@ -11,10 +11,63 @@ datasource db {
   url      = env("DETACHMENT_DATABASE_URL")
 }
 
+enum report_status_report_type {
+  americanism
+  children_youth
+  var
+  vavy
+  sir
+  detachment_csr
+  national_csr
+}
+
+enum squadron_reports_report_type {
+  americanism
+  children_youth
+  var
+  vavy
+  sir
+  detachment_csr
+  national_csr
+}
+
 model squadron {
   sq_number      Int     @id
   sq_name        String? @db.Text
   dist_number    Int
   location_alias String? @db.VarChar(255)
   phy_city       String? @db.Text
+}
+
+model users {
+  user_id    Int     @id
+  user_email String  @unique
+  is_admin   Boolean @default(false)
+}
+
+model report_status {
+  id              Int                       @id @default(autoincrement())
+  sq_number       Int
+  report_type     report_status_report_type
+  report_year     Int
+  last_updated_by Int
+  last_updated_at DateTime                  @default(now())
+  is_complete     Boolean                   @default(false)
+
+  @@unique([sq_number, report_type, report_year])
+}
+
+model squadron_reports {
+  id              Int                           @id @default(autoincrement())
+  sq_number       Int
+  report_type     squadron_reports_report_type
+  report_year     Int
+  report_data     Json
+  created_by      Int
+  created_at      DateTime                      @default(now())
+  updated_by      Int
+  updated_at      DateTime                      @default(now()) @updatedAt
+  is_current_year Boolean                       @default(true)
+
+  @@unique([sq_number, report_type, report_year])
 }
