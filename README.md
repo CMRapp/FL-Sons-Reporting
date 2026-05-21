@@ -53,7 +53,12 @@ ADMIN_EMAIL=your-admin-email@example.com
 EMAIL_1=recipient1@example.com
 EMAIL_2=recipient2@example.com
 # ... Add more email variables as needed
+
+# Squadron → district lookup (same Postgres as detachment-florida roster)
+DETACHMENT_DATABASE_URL=postgresql://...
 ```
+
+When `DETACHMENT_DATABASE_URL` is set, entering a squadron number auto-fills district from the detachment `squadron` table (same logic as portrait-awards). Copy the connection string from the **detachment-florida** project (`DATABASE_URL` / `POSTGRES_URL` on Vercel). If unset, members pick district manually.
 
 ## Development
 

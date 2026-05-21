@@ -1,0 +1,20 @@
+// Read-only client for Florida Detachment portal squadron roster (district lookup).
+// Set DETACHMENT_DATABASE_URL to the same Postgres URL as detachment-florida.
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/detachment-client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DETACHMENT_DATABASE_URL")
+}
+
+model squadron {
+  sq_number      Int     @id
+  sq_name        String? @db.Text
+  dist_number    Int
+  location_alias String? @db.VarChar(255)
+  phy_city       String? @db.Text
+}

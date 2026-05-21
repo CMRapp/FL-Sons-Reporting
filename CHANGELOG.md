@@ -5,6 +5,19 @@ All notable changes to the FL SAL Reporting Portal will be documented in this fi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-05-21
+
+### Added
+- **Squadron → district lookup** from the detachment-florida roster (`DETACHMENT_DATABASE_URL`, same query as portrait-awards). Public `GET /api/squadron/lookup`.
+- Squadron input: **leading zeros allowed**, **max 4 digits**.
+
+### Changed
+- **District** is read-only from lookup (dropdown removed); submit requires a valid squadron in detachment records.
+- User info fields (name, email, title, squadron, district) on **one row**.
+
+### Fixed
+- Report recipients: **database first**; `EMAIL_*` env vars only when a report has no DB address.
+
 ## [1.1.9] - 2026-04-09
 
 ### Fixed
@@ -275,6 +288,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added validation for email recipients
 - Secured file upload process with type and size restrictions
 
+[1.2.0]: https://github.com/CMRapp/FL-Sons-Reporting/compare/v1.1.9...v1.2.0
 [1.1.9]: https://github.com/CMRapp/FL-Sons-Reporting/compare/v1.1.8...v1.1.9
 [1.1.8]: https://github.com/CMRapp/FL-Sons-Reporting/compare/v1.1.7...v1.1.8
 [1.1.7]: https://github.com/CMRapp/FL-Sons-Reporting/compare/v1.1.6...v1.1.7

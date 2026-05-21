@@ -9,6 +9,12 @@ import {
   getReportLabelByUploadId,
   isValidReportUploadId,
 } from '@/app/lib/reports';
+import { lookupSquadronDistrict } from '@/app/lib/squadronDistrict';
+import {
+  isValidSquadronDigits,
+  normalizeSquadronDigits,
+  squadronLookupNumber,
+} from '@/app/lib/squadronInput';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -40,6 +46,38 @@ export async function POST(
       );
     }
 
+    const squadronDigits = normalizeSquadronDigits(squadronNumber);
+    const districtDigits = districtNumber.replace(/[^0-9]/g, '');
+
+    if (!isValidSquadronDigits(squadronDigits)) {
+      return NextResponse.json(
+        { error: 'Squadron number must be 1–4 digits' },
+        { status: 400 }
+      );
+    }
+
+    const squadronLookup = await lookupSquadronDistrict(squadronDigits);
+    if (!squadronLookup.configured) {
+      return NextResponse.json(
+        { error: 'Squadron district lookup is not available. Please contact the detachment office.' },
+        { status: 503 }
+      );
+    }
+    if (!squadronLookup.found) {
+      return NextResponse.json(
+        { error: `Squadron ${squadronLookupNumber(squadronDigits)} was not found in detachment records.` },
+        { status: 400 }
+      );
+    }
+    if (districtDigits !== String(squadronLookup.dist_number)) {
+      return NextResponse.json(
+        {
+          error: `District must be ${squadronLookup.dist_number} for Squadron ${squadronLookup.sq_number} per detachment records.`,
+        },
+        { status: 400 }
+      );
+    }
+
     // Validate file type - Only PDF and image formats allowed for security
     const allowedTypes = ['.pdf', '.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg'];
     const fileExtension = file.name.split('.').pop()?.toLowerCase();
@@ -61,7 +99,7 @@ export async function POST(
     // Create new filename - Format: SQ[squadron]-[reportName]
     const reportName = getReportCodeByUploadId(reportId);
     const reportFullName = getReportLabelByUploadId(reportId);
-    const newFileName = `SQ${squadronNumber}-${reportName}.${fileExtension}`;
+    const newFileName = `SQ${squadronDigits}-${reportName}.${fileExtension}`;
     const fileBuffer = await file.arrayBuffer();
 
     const rawRecipients = await getReportRecipients(reportId);
@@ -95,8 +133,8 @@ New Report Submission
 
 Report Type: ${reportName}
 Submitted By: ${userName} (${userTitle})
-Squadron: ${squadronNumber}
-District: ${districtNumber}
+Squadron: ${squadronDigits}
+District: ${districtDigits}
 Email: ${userEmail}
 
 File: ${newFileName}
@@ -105,8 +143,8 @@ File: ${newFileName}
         <h2>New Report Submission</h2>
         <p><strong>Report Type:</strong> ${reportName}</p>
         <p><strong>Submitted By:</strong> ${userName} (${userTitle})</p>
-        <p><strong>Squadron:</strong> ${squadronNumber}</p>
-        <p><strong>District:</strong> ${districtNumber}</p>
+        <p><strong>Squadron:</strong> ${squadronDigits}</p>
+        <p><strong>District:</strong> ${districtDigits}</p>
         <p><strong>Email:</strong> ${userEmail}</p>
         <p><strong>File:</strong> ${newFileName}</p>
       `,
@@ -139,8 +177,8 @@ File: ${newFileName}
           userName,
           userEmail,
           userTitle,
-          squadronNumber,
-          districtNumber,
+          squadronNumber: squadronDigits,
+          districtNumber: districtDigits,
           fileName: newFileName,
           fileSize: file.size,
           submitterIp,
@@ -161,8 +199,8 @@ Thank you for submitting your ${reportName} report.
 Report Details:
 Report Type: ${reportName}
 Submitted By: ${userName} (${userTitle})
-Squadron: ${squadronNumber}
-District: ${districtNumber}
+Squadron: ${squadronDigits}
+District: ${districtDigits}
 File: ${newFileName}
 
 Your report has been successfully submitted and will be processed.
@@ -172,8 +210,8 @@ Your report has been successfully submitted and will be processed.
         <p><strong>Report Details:</strong></p>
         <p><strong>Report Type:</strong> ${reportName}</p>
         <p><strong>Submitted By:</strong> ${userName} (${userTitle})</p>
-        <p><strong>Squadron:</strong> ${squadronNumber}</p>
-        <p><strong>District:</strong> ${districtNumber}</p>
+        <p><strong>Squadron:</strong> ${squadronDigits}</p>
+        <p><strong>District:</strong> ${districtDigits}</p>
         <p><strong>File:</strong> ${newFileName}</p>
         <p>Your report has been successfully submitted and will be processed.</p>
       `

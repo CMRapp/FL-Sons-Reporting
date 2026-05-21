@@ -1,6 +1,11 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import {
+  MAX_SQUADRON_DIGITS,
+  normalizeSquadronDigits,
+  squadronLookupNumber,
+} from '@/app/lib/squadronInput';
 import Image from 'next/image';
 import Modal from './Modal';
 import JumpBar from './JumpBar';
@@ -21,7 +26,6 @@ interface FormData {
 }
 
 const UploadForm = () => {
-  const districtNumbers = Array.from({ length: 17 }, (_, i) => i + 1).filter(num => num !== 10);
   const serviceYear = getServiceYear();
 
   const [formData, setFormData] = useState<FormData>({
@@ -44,11 +48,76 @@ const UploadForm = () => {
   const [focusedReport, setFocusedReport] = useState<string | null>(null);
   const [showDisclaimer, setShowDisclaimer] = useState(true);
   const submittingRef = useRef<Set<number>>(new Set());
+  const [districtLookupConfigured, setDistrictLookupConfigured] = useState<boolean | null>(null);
+  const [districtLookupOk, setDistrictLookupOk] = useState<boolean | null>(null);
+  const [districtLookupDist, setDistrictLookupDist] = useState<number | null>(null);
+  const [districtLookupLoading, setDistrictLookupLoading] = useState(false);
+
+  useEffect(() => {
+    const digits = normalizeSquadronDigits(formData.squadronNumber);
+    const n = squadronLookupNumber(digits);
+    if (!digits || !Number.isFinite(n) || n <= 0) {
+      setDistrictLookupOk(null);
+      setDistrictLookupDist(null);
+      setDistrictLookupLoading(false);
+      setFormData((prev) =>
+        prev.districtNumber ? { ...prev, districtNumber: '' } : prev
+      );
+      return;
+    }
+
+    setDistrictLookupLoading(true);
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/squadron/lookup?number=${n}`, { cache: 'no-store' });
+        const json = (await res.json()) as {
+          configured?: boolean;
+          found?: boolean;
+          dist_number?: number;
+        };
+
+        if (json.configured !== true) {
+          setDistrictLookupConfigured(false);
+          setDistrictLookupOk(null);
+          setDistrictLookupDist(null);
+          setFormData((prev) => ({ ...prev, districtNumber: '' }));
+          return;
+        }
+
+        setDistrictLookupConfigured(true);
+        if (json.found && json.dist_number != null) {
+          setDistrictLookupOk(true);
+          setDistrictLookupDist(json.dist_number);
+          setFormData((prev) => ({
+            ...prev,
+            districtNumber: String(json.dist_number),
+          }));
+        } else {
+          setDistrictLookupOk(false);
+          setDistrictLookupDist(null);
+          setFormData((prev) => ({ ...prev, districtNumber: '' }));
+        }
+      } catch {
+        setDistrictLookupConfigured(null);
+        setDistrictLookupOk(null);
+        setDistrictLookupDist(null);
+      } finally {
+        setDistrictLookupLoading(false);
+      }
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [formData.squadronNumber]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    // Clear all error messages when user starts typing
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    setUploadStatus(Array(REPORT_ORDER.length).fill(''));
+  };
+
+  const handleSquadronChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const digits = normalizeSquadronDigits(e.target.value);
+    setFormData((prev) => ({ ...prev, squadronNumber: digits }));
     setUploadStatus(Array(REPORT_ORDER.length).fill(''));
   };
 
@@ -137,30 +206,51 @@ const UploadForm = () => {
       return;
     }
 
+    const squadronDigits = normalizeSquadronDigits(formData.squadronNumber);
+
     // Sanitize form inputs
     const sanitizedFormData = {
       userName: formData.userName.replace(/[<>]/g, ''),
       userEmail: formData.userEmail.toLowerCase().trim(),
       userTitle: formData.userTitle.replace(/[<>]/g, ''),
-      squadronNumber: formData.squadronNumber.replace(/[^0-9]/g, ''),
-      districtNumber: formData.districtNumber.replace(/[^0-9]/g, '')
+      squadronNumber: squadronDigits,
+      districtNumber: formData.districtNumber.replace(/[^0-9]/g, ''),
     };
 
-    // Validate squadron number format
-    if (!/^\d+$/.test(sanitizedFormData.squadronNumber)) {
-      setUploadStatus(prev => {
+    if (!/^\d{1,4}$/.test(squadronDigits)) {
+      setUploadStatus((prev) => {
         const newStatus = [...prev];
-        newStatus[index] = 'Error: Squadron number must contain only digits';
+        newStatus[index] = `Error: Squadron number must be 1–${MAX_SQUADRON_DIGITS} digits`;
         return newStatus;
       });
       return;
     }
 
-    // Validate district number
-    if (!districtNumbers.includes(parseInt(sanitizedFormData.districtNumber))) {
-      setUploadStatus(prev => {
+    if (districtLookupConfigured !== true) {
+      setUploadStatus((prev) => {
         const newStatus = [...prev];
-        newStatus[index] = 'Error: Invalid district number';
+        newStatus[index] = 'Error: District lookup is unavailable. Contact the detachment office.';
+        return newStatus;
+      });
+      return;
+    }
+
+    if (districtLookupLoading || districtLookupOk !== true || districtLookupDist == null) {
+      setUploadStatus((prev) => {
+        const newStatus = [...prev];
+        newStatus[index] =
+          districtLookupOk === false
+            ? 'Error: Squadron not found in detachment records'
+            : 'Error: Enter a valid squadron number to resolve district';
+        return newStatus;
+      });
+      return;
+    }
+
+    if (sanitizedFormData.districtNumber !== String(districtLookupDist)) {
+      setUploadStatus((prev) => {
+        const newStatus = [...prev];
+        newStatus[index] = `Error: District must be ${districtLookupDist} for this squadron`;
         return newStatus;
       });
       return;
@@ -386,33 +476,47 @@ const UploadForm = () => {
               <input
                 id="squadronNumber"
                 type="text"
+                inputMode="numeric"
                 name="squadronNumber"
                 value={formData.squadronNumber}
-                onChange={handleInputChange}
-                placeholder="Enter squadron number"
+                onChange={handleSquadronChange}
+                placeholder="####"
+                maxLength={MAX_SQUADRON_DIGITS}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-black placeholder:text-gray-400"
                 required
                 aria-required="true"
-                aria-label="Squadron number"
+                aria-label="Squadron number (up to 4 digits, leading zeros allowed)"
               />
+              {formData.squadronNumber.length > 0 && (
+                <p className="mt-0.5 text-[10px] leading-tight" aria-live="polite">
+                  {!districtLookupLoading && districtLookupOk === false && (
+                    <span className="font-semibold text-red-600">Squadron not found</span>
+                  )}
+                </p>
+              )}
             </div>
             <div className="flex-[0.85] min-w-[6.5rem]">
-              <label htmlFor="districtNumber" className="block text-xs font-medium text-black uppercase whitespace-nowrap">District #</label>
-              <select
-                id="districtNumber"
-                name="districtNumber"
-                value={formData.districtNumber}
-                onChange={handleInputChange}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-black placeholder:text-gray-400"
-                required
-                aria-required="true"
-                aria-label="District number"
-              >
-                <option value="">Select a district</option>
-                {districtNumbers.map(num => (
-                  <option key={num} value={num}>District {num}</option>
-                ))}
-              </select>
+              <label htmlFor="districtDisplay" className="block text-xs font-medium text-black uppercase whitespace-nowrap">District #</label>
+              <input type="hidden" name="districtNumber" value={formData.districtNumber} />
+              <input
+                id="districtDisplay"
+                type="text"
+                readOnly
+                tabIndex={-1}
+                value={
+                  districtLookupLoading
+                    ? '…'
+                    : districtLookupOk === true && districtLookupDist != null
+                      ? String(districtLookupDist)
+                      : '—'
+                }
+                className="mt-1 block w-full rounded-md border-gray-200 bg-gray-50 text-black cursor-default"
+                aria-label={
+                  districtLookupDist != null
+                    ? `District ${districtLookupDist}`
+                    : 'District (resolved from squadron number)'
+                }
+              />
             </div>
           </div>
         </div>
