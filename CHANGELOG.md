@@ -5,6 +5,13 @@ All notable changes to the FL SAL Reporting Portal will be documented in this fi
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - 2026-05-21
+
+### Fixed
+- **“No recipient email configured”** when admin DB values fail to parse: fall back to `EMAIL_*` env vars, then bundled `reportEmails.json` defaults (DB still wins when valid).
+- Recipient parsing strips invisible/zero-width characters and non-breaking spaces from stored addresses.
+- Reporting Prisma client accepts `POSTGRES_URL` / related Vercel Postgres env names, not only `DATABASE_URL`.
+
 ## [1.2.0] - 2026-05-21
 
 ### Added
@@ -288,6 +295,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added validation for email recipients
 - Secured file upload process with type and size restrictions
 
+[1.2.1]: https://github.com/CMRapp/FL-Sons-Reporting/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/CMRapp/FL-Sons-Reporting/compare/v1.1.9...v1.2.0
 [1.1.9]: https://github.com/CMRapp/FL-Sons-Reporting/compare/v1.1.8...v1.1.9
 [1.1.8]: https://github.com/CMRapp/FL-Sons-Reporting/compare/v1.1.7...v1.1.8

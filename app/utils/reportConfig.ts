@@ -1,6 +1,7 @@
 import prisma from '@/app/lib/prisma';
-import { REPORT_METADATA, REPORT_ORDER } from '@/app/lib/reports';
+import { REPORT_METADATA, REPORT_ORDER, type ReportUploadId } from '@/app/lib/reports';
 import { emailsFromRecipientField } from '@/app/utils/emailList';
+import reportEmailsFile from '@/app/config/reportEmails.json';
 
 function recipientsFromRaw(raw: string): string[] | null {
   const list = emailsFromRecipientField(raw);
@@ -13,31 +14,59 @@ function envRecipients(reportId: string): string[] | null {
   return recipientsFromRaw(envEmail);
 }
 
+function bundledRecipients(reportId: string): string[] | null {
+  const entry = reportEmailsFile.reportEmails[reportId as ReportUploadId];
+  if (!entry?.email?.trim()) return null;
+  return recipientsFromRaw(entry.email);
+}
+
 /**
  * Recipient list for a report type.
- * Uses admin database settings; environment variables (EMAIL_1–EMAIL_8) apply only
- * when the database has no address for that report or the database is unavailable.
+ * Order: admin database → EMAIL_* env vars → bundled reportEmails.json defaults.
+ * Env/json apply when the database row is missing, empty, or does not parse to valid addresses.
  */
 export async function getReportRecipients(reportId: string): Promise<string[] | null> {
+  let dbRaw: string | null = null;
+
   try {
     const reportConfig = await prisma.reportEmail.findUnique({
       where: { reportId },
     });
 
     if (reportConfig?.email?.trim()) {
-      const list = recipientsFromRaw(reportConfig.email);
+      dbRaw = reportConfig.email;
+      const list = recipientsFromRaw(dbRaw);
       if (list) return list;
-      console.error(
-        `Report ${reportId}: database has recipient text but no valid addresses were parsed`
+      console.warn(
+        `Report ${reportId}: database recipient text did not parse; trying env/bundled fallback`
       );
-      return null;
     }
-
-    return envRecipients(reportId);
   } catch (error) {
     console.error('Error reading report recipients from database:', error);
-    return envRecipients(reportId);
   }
+
+  const fromEnv = envRecipients(reportId);
+  if (fromEnv) {
+    if (dbRaw) {
+      console.warn(`Report ${reportId}: using EMAIL_${reportId} env fallback`);
+    }
+    return fromEnv;
+  }
+
+  const fromFile = bundledRecipients(reportId);
+  if (fromFile) {
+    console.warn(`Report ${reportId}: using bundled reportEmails.json fallback`);
+    return fromFile;
+  }
+
+  if (dbRaw) {
+    console.error(
+      `Report ${reportId}: database has recipient text but no valid addresses were parsed:`,
+      dbRaw
+    );
+  }
+
+  return null;
 }
 
 /**

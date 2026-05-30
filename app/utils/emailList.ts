@@ -1,5 +1,13 @@
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/** Strip BOM, zero-width chars, and non-breaking spaces from pasted/DB recipient fields. */
+function sanitizeRecipientRaw(raw: string): string {
+  return raw
+    .replace(/^\uFEFF/, '')
+    .replace(/[\u200B-\u200D\u2060\uFEFF]/g, '')
+    .replace(/\u00A0/g, ' ');
+}
+
 /**
  * One segment after comma/semicolon split: strip # comments, mailto:, and
  * RFC-style `Name <address>` so validation matches how people paste addresses.
@@ -33,7 +41,7 @@ export function parseEmailList(raw: string): string[] {
  * copy/paste glitches), extract likely addresses and validate.
  */
 export function emailsFromRecipientField(raw: string): string[] {
-  const trimmed = raw?.trim() ?? '';
+  const trimmed = sanitizeRecipientRaw(raw?.trim() ?? '');
   if (!trimmed) return [];
 
   const structured = dedupeEmailList(parseEmailList(trimmed));
