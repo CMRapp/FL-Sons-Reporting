@@ -1,3 +1,5 @@
+import { formatSmtpSender, getSmtpFromAddress, isSmtpConfigured } from '@/app/lib/emailSender';
+
 function asEmailArray(value: string | string[]): string[] {
   const arr = Array.isArray(value) ? value : [value];
   return arr.map((e) => e.trim()).filter(Boolean);
@@ -6,7 +8,7 @@ function asEmailArray(value: string | string[]): string[] {
 interface EmailData {
   to: string | string[];
   bcc?: string | string[];
-  from: string;
+  from?: string;
   subject: string;
   text: string;
   html: string;
@@ -28,111 +30,78 @@ interface ConfirmationEmailData {
 interface EmailResponse {
   success: boolean;
   error?: string;
+  messageId?: string;
 }
 
-async function sendEmailToSMTP(data: {
-  to: string | string[];
-  bcc?: string | string[];
-  from: string;
-  subject: string;
-  text: string;
-  html: string;
-  attachments?: Array<{
-    content: string;
-    filename: string;
-    type: string;
-  }>;
-}) {
+type Smtp2GoResponse = {
+  data?: {
+    succeeded?: number;
+    failed?: number;
+    failures?: Array<{ address?: string; error?: string }>;
+    error?: string;
+    error_code?: string;
+    email_id?: string;
+  };
+  error?: string;
+};
+
+function attachmentMimeType(filename: string, contentType: string): string {
+  const ct = contentType?.trim();
+  if (ct) return ct;
+  const ext = filename.split('.').pop()?.toLowerCase();
+  const map: Record<string, string> = {
+    pdf: 'application/pdf',
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    png: 'image/png',
+    gif: 'image/gif',
+    webp: 'image/webp',
+    bmp: 'image/bmp',
+    svg: 'image/svg+xml',
+  };
+  return (ext && map[ext]) || 'application/octet-stream';
+}
+
+function parseSmtp2GoResponse(raw: string): Smtp2GoResponse | null {
+  if (!raw.trim()) return null;
   try {
-    const toList = asEmailArray(data.to);
-    const bccList = data.bcc ? asEmailArray(data.bcc) : [];
-
-    console.log('Preparing SMTP2GO email request:', {
-      to: toList,
-      bcc: bccList.length ? bccList : undefined,
-      from: data.from,
-      subject: data.subject,
-      hasAttachments: !!data.attachments
-    });
-
-    if (!process.env.SMTP2GO_API_KEY) {
-      throw new Error('SMTP2GO_API_KEY is not configured');
-    }
-
-    const formData = new FormData();
-    formData.append('api_key', process.env.SMTP2GO_API_KEY);
-    formData.append('to', toList.join(','));
-    formData.append('from', data.from);
-    formData.append('subject', data.subject);
-    formData.append('text', data.text);
-    formData.append('html', data.html);
-    
-    if (data.attachments) {
-      data.attachments.forEach((attachment, index) => {
-        formData.append(`attachment${index}`, attachment.content);
-        formData.append(`attachment${index}_filename`, attachment.filename);
-        formData.append(`attachment${index}_type`, attachment.type);
-      });
-    }
-
-    console.log('Sending request to SMTP2GO...');
-    const response = await fetch('https://api.smtp2go.com/v3/email/send', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        api_key: process.env.SMTP2GO_API_KEY,
-        to: toList,
-        ...(bccList.length ? { bcc: bccList } : {}),
-        sender: data.from,
-        subject: data.subject,
-        text_body: data.text,
-        html_body: data.html,
-        attachments: data.attachments?.map(attachment => ({
-          filename: attachment.filename,
-          fileblob: attachment.content,
-          mimetype: attachment.type
-        }))
-      }),
-    });
-
-    console.log('SMTP2GO response status:', response.status);
-    const responseData = await response.json();
-    console.log('SMTP2GO response:', responseData);
-
-    if (!response.ok) {
-      const errorMessage = responseData.message || 'Failed to send email';
-      const errorDetails = responseData.details || responseData;
-      console.error('SMTP2GO API error:', {
-        status: response.status,
-        message: errorMessage,
-        details: errorDetails
-      });
-      throw new Error(`${errorMessage}: ${JSON.stringify(errorDetails)}`);
-    }
-
-    return responseData;
-  } catch (error) {
-    console.error('Error in sendEmailToSMTP:', error);
-    if (error instanceof Error) {
-      console.error('Error details:', {
-        message: error.message,
-        stack: error.stack
-      });
-    }
-    throw error;
+    return JSON.parse(raw) as Smtp2GoResponse;
+  } catch {
+    return null;
   }
+}
+
+function smtp2GoFailureMessage(parsed: Smtp2GoResponse): string | null {
+  const d = parsed.data;
+  const topError = parsed.error || d?.error;
+  if (topError) return String(topError);
+  if (d?.error_code) return String(d.error_code);
+  if (d && typeof d.succeeded === 'number' && d.succeeded === 0) {
+    return 'SMTP2GO reported no successful deliveries for this message.';
+  }
+  if (d && typeof d.failed === 'number' && d.failed > 0) {
+    if (Array.isArray(d.failures) && d.failures.length > 0) {
+      return d.failures
+        .map((f) => `${f.address ?? '?'}: ${f.error ?? 'rejected'}`)
+        .join('; ');
+    }
+    return `${d.failed} recipient(s) failed`;
+  }
+  return null;
 }
 
 export async function sendEmail(data: EmailData): Promise<EmailResponse> {
   try {
-    if (!process.env.SMTP2GO_API_KEY) {
+    if (!isSmtpConfigured()) {
       console.error('SMTP2GO_API_KEY is not configured');
-      return { success: false, error: 'Email service not configured' };
+      return { success: false, error: 'Email service not configured (SMTP2GO_API_KEY missing)' };
     }
 
     const toList = asEmailArray(data.to);
+    if (toList.length === 0) {
+      return { success: false, error: 'No recipient addresses provided' };
+    }
+
     let bccList = data.bcc ? asEmailArray(data.bcc) : [];
     const toSet = new Set(toList.map((t) => t.trim().toLowerCase()).filter(Boolean));
     bccList = bccList.filter((b) => !toSet.has(b.trim().toLowerCase()));
@@ -144,118 +113,81 @@ export async function sendEmail(data: EmailData): Promise<EmailResponse> {
       return true;
     });
 
+    const sender = formatSmtpSender(data.from);
     const requestData = {
       api_key: process.env.SMTP2GO_API_KEY,
-      sender: data.from,
+      sender,
       to: toList,
       ...(bccList.length ? { bcc: bccList } : {}),
       subject: data.subject,
       text_body: data.text,
       html_body: data.html,
-      attachments: data.attachments?.map(attachment => ({
+      attachments: data.attachments?.map((attachment) => ({
         filename: attachment.filename,
         fileblob: Buffer.from(attachment.content).toString('base64'),
-        mimetype: attachment.contentType
-      }))
+        mimetype: attachmentMimeType(attachment.filename, attachment.contentType),
+      })),
     };
 
-    console.log('Sending email with data:', {
-      ...requestData,
-      api_key: '[REDACTED]',
-      attachments: requestData.attachments?.map(a => ({
-        ...a,
-        fileblob: '[REDACTED]'
-      }))
+    console.log('Sending email via SMTP2GO:', {
+      toCount: toList.length,
+      to: toList,
+      sender,
+      subject: data.subject,
+      hasAttachments: Boolean(requestData.attachments?.length),
     });
 
     const response = await fetch('https://api.smtp2go.com/v3/email/send', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        Accept: 'application/json',
       },
-      body: JSON.stringify(requestData)
+      body: JSON.stringify(requestData),
     });
 
     const raw = await response.text();
+    const parsed = parseSmtp2GoResponse(raw);
 
     if (!response.ok) {
-      let errorMessage = 'Failed to send email';
-      try {
-        const errorData = raw ? JSON.parse(raw) : {};
-        console.error('SMTP2GO API error:', errorData);
-        errorMessage =
-          (errorData as { data?: { error?: string } }).data?.error || errorMessage;
-      } catch {
-        console.error('SMTP2GO API error (non-JSON body):', raw.slice(0, 500));
-        errorMessage = raw.trim().slice(0, 200) || errorMessage;
-      }
-      return { success: false, error: errorMessage };
+      const err =
+        parsed?.data?.error ||
+        parsed?.error ||
+        raw.trim().slice(0, 200) ||
+        'Failed to send email';
+      console.error('SMTP2GO HTTP error:', response.status, err, raw.slice(0, 500));
+      return { success: false, error: String(err) };
     }
 
-    if (raw.trim()) {
-      try {
-        const parsed = JSON.parse(raw) as {
-          data?: {
-            succeeded?: number;
-            failed?: number;
-            failures?: Array<{ address?: string; error?: string }>;
-            error?: string;
-          };
-          error?: string;
-        };
-        const d = parsed.data;
-        const topError = parsed.error || d?.error;
-        if (topError) {
-          console.error('SMTP2GO response error:', topError, parsed);
-          return { success: false, error: String(topError) };
-        }
-        if (d && typeof d.succeeded === 'number' && d.succeeded === 0) {
-          console.error('SMTP2GO succeeded=0:', parsed);
-          return {
-            success: false,
-            error: 'SMTP2GO reported no successful deliveries for this message.',
-          };
-        }
-        if (d && typeof d.failed === 'number' && d.failed > 0) {
-          const detail =
-            Array.isArray(d.failures) && d.failures.length > 0
-              ? d.failures
-                  .map((f) => `${f.address ?? '?'}: ${f.error ?? 'rejected'}`)
-                  .join('; ')
-              : `${d.failed} recipient(s) failed`;
-          console.error('SMTP2GO recipient failure:', detail, parsed);
-          return { success: false, error: `Email not accepted for all recipients: ${detail}` };
-        }
-        console.log('Email sent successfully:', parsed);
-      } catch {
-        console.log('Email sent (unparseable success body):', raw.slice(0, 200));
+    if (parsed) {
+      const failure = smtp2GoFailureMessage(parsed);
+      if (failure) {
+        console.error('SMTP2GO delivery failure:', failure, parsed);
+        return { success: false, error: `Email not accepted for all recipients: ${failure}` };
       }
+      console.log('Email accepted by SMTP2GO:', {
+        emailId: parsed.data?.email_id,
+        succeeded: parsed.data?.succeeded,
+      });
+      return { success: true, messageId: parsed.data?.email_id };
     }
 
+    console.log('Email sent (empty or non-JSON SMTP2GO body)');
     return { success: true };
   } catch (error) {
     console.error('Email sending error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error' 
+      error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
 }
 
 export async function sendConfirmationEmail(data: ConfirmationEmailData) {
-  try {
-    if (!process.env.SMTP2GO_API_KEY) {
-      console.error('SMTP2GO API key not configured');
-      return { success: false, details: 'Email service not configured properly' };
-    }
-
-    console.log('Preparing confirmation email for:', data.userEmail);
-
-    const emailData = {
-      to: data.userEmail, // Send confirmation to the user's email
-      from: process.env.SMTP_FROM_EMAIL || 'noreply@floridasons.org',
-      subject: `Confirmation: ${data.reportName} Report Submission`,
-      text: `
+  const emailData = {
+    to: data.userEmail,
+    subject: `Confirmation: ${data.reportName} Report Submitted`,
+    text: `
 Thank you for submitting your ${data.reportName} report.
 
 Submission Details:
@@ -264,30 +196,22 @@ Submission Details:
 - Submitted By: ${data.userName}
 - Submission Time: ${data.submissionDateTime}
 
-<i>Confirmation sent from The Detachment of Florida Reporting Portal</i>
-      `,
-      html: `
-        <h2>Thank you for submitting your ${data.reportName} report.</h2>
-        <h3>Submission Details:</h3>
-        <ul>
-          <li><strong>Report:</strong> ${data.reportName}</li>
-          <li><strong>File:</strong> ${data.fileName}</li>
-          <li><strong>Submitted By:</strong> ${data.userName}</li>
-          <li><strong>Submission Time:</strong> ${data.submissionDateTime}</li>
-        </ul>
-        <p><i>Confirmation sent from The Detachment of Florida Reporting Portal</i></p>
-      `
-    };
+Confirmation sent from The Detachment of Florida Reporting Portal
+    `,
+    html: `
+      <h2>Thank you for submitting your ${data.reportName} report.</h2>
+      <h3>Submission Details:</h3>
+      <ul>
+        <li><strong>Report:</strong> ${data.reportName}</li>
+        <li><strong>File:</strong> ${data.fileName}</li>
+        <li><strong>Submitted By:</strong> ${data.userName}</li>
+        <li><strong>Submission Time:</strong> ${data.submissionDateTime}</li>
+      </ul>
+      <p><em>Confirmation sent from The Detachment of Florida Reporting Portal</em></p>
+    `,
+  };
 
-    console.log('Sending confirmation email to:', data.userEmail);
-    await sendEmailToSMTP(emailData);
-    console.log('Confirmation email sent successfully');
-    return { success: true };
-  } catch (error) {
-    console.error('Error sending confirmation email:', error);
-    return { 
-      success: false, 
-      details: error instanceof Error ? error.message : 'Unknown error occurred while sending confirmation email'
-    };
-  }
-} 
+  return sendEmail(emailData);
+}
+
+export { getSmtpFromAddress, isSmtpConfigured };

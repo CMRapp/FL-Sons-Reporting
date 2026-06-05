@@ -128,7 +128,6 @@ export async function POST(
 
     const emailData = {
       to: recipients,
-      from: process.env.SMTP_FROM_EMAIL || 'noreply@floridasons.org',
       subject: `New ${reportName} Report Submission`,
       text: `
 New Report Submission
@@ -159,11 +158,21 @@ File: ${newFileName}
 
     const emailResult = await sendEmail(emailData);
     if (!emailResult.success) {
+      console.error('Staff notification email failed:', {
+        reportId,
+        recipients,
+        error: emailResult.error,
+      });
       return NextResponse.json(
         { error: 'Failed to send email', details: emailResult.error },
         { status: 500 }
       );
     }
+    console.log('Staff notification email sent:', {
+      reportId,
+      recipientCount: recipients.length,
+      messageId: emailResult.messageId,
+    });
 
     const detachmentSync = await syncDetachmentReportSubmission({
       reportUploadId: reportId as ReportUploadId,
@@ -208,7 +217,6 @@ File: ${newFileName}
     // Send confirmation email to user
     const confirmationEmailData = {
       to: userEmail,
-      from: process.env.SMTP_FROM_EMAIL || 'noreply@floridasons.org',
       subject: `Confirmation: ${reportName} Report Submitted`,
       text: `
 Thank you for submitting your ${reportName} report.

@@ -54,6 +54,10 @@ EMAIL_1=recipient1@example.com
 EMAIL_2=recipient2@example.com
 # ... Add more email variables as needed
 
+# Email delivery (SMTP2GO — required for uploads; copy from detachment portal Vercel project)
+SMTP2GO_API_KEY=api-...
+SMTP_FROM_EMAIL=noreply@floridasons.org
+
 # Squadron → district lookup + admin reporting sync (detachment-florida Postgres)
 DETACHMENT_DATABASE_URL=postgresql://...
 
@@ -68,6 +72,8 @@ When `DETACHMENT_DATABASE_URL` is set:
 - Successful uploads mark the report **Complete** on detachment **Admin → Reporting** (`report_status` + `squadron_reports`), except **SDR** (not in that dashboard).
 
 Copy `DATABASE_URL` / `POSTGRES_URL` from the **detachment-florida** Vercel project. For `last_updated_by`, set `DETACHMENT_REPORTING_USER_ID` or `DETACHMENT_REPORTING_USER_EMAIL` (defaults to `reports@floridasons.org`, then first admin user).
+
+**Email not arriving?** Recipients in the admin database only control *who* gets mail. Delivery requires **`SMTP2GO_API_KEY`** and **`SMTP_FROM_EMAIL`** on the **reporting** Vercel project (separate from `DETACHMENT_DATABASE_URL`). After deploy, sign in to `/admin` and call `GET /api/admin/email-status` (Bearer token) or `POST /api/admin/test-email` with `{ "reportId": "2" }` to verify SMTP.
 
 ## Development
 

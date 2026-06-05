@@ -1,13 +1,12 @@
 import { NextResponse } from 'next/server';
 import { sendEmail } from '@/app/services/emailService';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 export async function POST() {
   try {
     const testData = {
       to: process.env.ADMIN_EMAIL || 'test@example.com',
-      from: process.env.SMTP_FROM_EMAIL || 'noreply@floridasons.org',
       subject: 'Test Email from Florida Sons Reporting Portal',
       text: `
 This is a test email from the Florida Sons Reporting Portal.
