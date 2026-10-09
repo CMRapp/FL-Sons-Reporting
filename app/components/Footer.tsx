@@ -1,4 +1,4 @@
-import Image from 'next/image';
+import CmrWebDevLockup from './CmrWebDevLockup';
 
 const Footer = () => {
   return (
@@ -9,18 +9,7 @@ const Footer = () => {
             © {new Date().getFullYear()} Detachment of Florida
           </div>
           <div className="text-sm flex items-center space-x-4">
-            <a href="https://www.cmrwebstudio.com" target="_blank" rel="noopener noreferrer" className="hover:text-blue-200">
-              Web Development by
-            </a>
-            <a href="https://www.cmrwebstudio.com" target="_blank" rel="noopener noreferrer">
-              <Image
-                src="/cmr_patriotic_logo_65.png"
-                alt="CMR Web Studio Patriotic Logo"
-                width={84}
-                height={30}
-                className="h-[30px] w-[84px]"
-              />
-            </a>
+            <CmrWebDevLockup onDark />
           </div>
         </div>
       </div>
@@ -28,4 +17,4 @@ const Footer = () => {
   );
 };
 
-export default Footer; 
+export default Footer;

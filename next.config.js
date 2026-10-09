@@ -35,6 +35,11 @@ const nextConfig = {
       net: false,
       tls: false,
     };
+    config.module.rules.push({
+      test: /\.svg$/i,
+      resourceQuery: /raw/,
+      type: 'asset/source',
+    });
     return config;
   },
 };
